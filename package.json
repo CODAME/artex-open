@@ -1,0 +1,25 @@
+{
+  "name": "artex-open",
+  "private": false,
+  "version": "0.0.0",
+  "description": "ARTEX open layer packages — shader library, extension API, and experiment sandbox.",
+  "type": "module",
+  "workspaces": [
+    "packages/artex-contract",
+    "packages/artex-shaders",
+    "packages/artex-extensions",
+    "packages/artex-experiments"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "publish": "changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.0",
+    "vitest": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

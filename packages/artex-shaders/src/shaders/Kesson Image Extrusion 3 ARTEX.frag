@@ -1,0 +1,407 @@
+precision mediump float;
+uniform float uTime;
+uniform float iTime;
+uniform vec2 uResolution;
+uniform vec3 iResolution;
+uniform vec3 iChannelResolution[4];
+uniform sampler2D uMainImage;
+uniform sampler2D uStateA;
+uniform sampler2D uStateB;
+uniform sampler2D uStateC;
+uniform sampler2D uStateD;
+uniform sampler2D uMask;
+uniform sampler2D uState1;
+uniform sampler2D uState2;
+uniform int uUseStateBlending;
+uniform float uBlendFactor;
+uniform int uStateCount;
+uniform int uFlowEnabled;
+uniform float uFlowIntensity;
+uniform float uFlowSpeed;
+uniform float uFlowScale;
+uniform vec4 iDate;
+uniform float uAudioLevel;
+uniform float uBassLevel;
+uniform float uProximity;
+uniform float uCameraLevel;
+uniform float uEffectStrength;
+uniform float uEffectParam1;
+uniform float uEffectParam2;
+uniform float uEffectParam3;
+vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
+vec4 tex2D(sampler2D s, vec3 uv) { return texture2D(s, uv.xy); }
+vec4 tex2D(sampler2D s, vec4 uv) { return texture2D(s, uv.xy); }
+
+float artex_hash(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float artex_noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = artex_hash(i);
+  float b = artex_hash(i + vec2(1.0, 0.0));
+  float c = artex_hash(i + vec2(0.0, 1.0));
+  float d = artex_hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+vec2 artex_applyFlow(vec2 uv) {
+  if (uFlowEnabled != 1) return uv;
+  vec2 p = uv * uFlowScale;
+  float nx = artex_noise(p + vec2(10.0, 0.0) + uTime * uFlowSpeed);
+  float ny = artex_noise(p + vec2(0.0, 10.0) + uTime * uFlowSpeed);
+  vec2 distortion = vec2(
+    (nx - 0.5) * uFlowIntensity * 0.15,
+    (ny - 0.5) * uFlowIntensity * 0.15
+  );
+  return uv + distortion;
+}
+
+vec4 artex_blendStates(vec2 uv) {
+  if (uUseStateBlending != 1) {
+    return tex2D(uMainImage, uv);
+  }
+
+  if (uStateCount <= 1) {
+    return tex2D(uStateA, uv);
+  } else if (uStateCount == 2) {
+    vec4 stateA = tex2D(uStateA, uv);
+    vec4 stateB = tex2D(uStateB, uv);
+    return mix(stateA, stateB, uBlendFactor);
+  } else if (uStateCount == 3) {
+    if (uBlendFactor < 0.5) {
+      float t = uBlendFactor * 2.0;
+      vec4 stateA = tex2D(uStateA, uv);
+      vec4 stateB = tex2D(uStateB, uv);
+      return mix(stateA, stateB, t);
+    } else {
+      float t = (uBlendFactor - 0.5) * 2.0;
+      vec4 stateB = tex2D(uStateB, uv);
+      vec4 stateC = tex2D(uStateC, uv);
+      return mix(stateB, stateC, t);
+    }
+  } else if (uStateCount >= 4) {
+    float third = 1.0 / 3.0;
+    float twoThirds = 2.0 / 3.0;
+    if (uBlendFactor < third) {
+      float t = uBlendFactor * 3.0;
+      vec4 stateA = tex2D(uStateA, uv);
+      vec4 stateB = tex2D(uStateB, uv);
+      return mix(stateA, stateB, t);
+    } else if (uBlendFactor < twoThirds) {
+      float t = (uBlendFactor - third) * 3.0;
+      vec4 stateB = tex2D(uStateB, uv);
+      vec4 stateC = tex2D(uStateC, uv);
+      return mix(stateB, stateC, t);
+    } else {
+      float t = (uBlendFactor - twoThirds) * 3.0;
+      vec4 stateC = tex2D(uStateC, uv);
+      vec4 stateD = tex2D(uStateD, uv);
+      return mix(stateC, stateD, t);
+    }
+  }
+
+  return tex2D(uMainImage, uv);
+}
+
+vec4 artex_sampleMain(vec2 uv) {
+  vec2 flowUv = artex_applyFlow(uv);
+  return artex_blendStates(flowUv);
+}
+
+vec4 artex_sampleMain(float uv) {
+  return artex_sampleMain(vec2(uv));
+}
+
+vec4 artex_sampleMain(vec3 uv) {
+  return artex_sampleMain(uv.xy);
+}
+
+vec4 artex_sampleMain(vec4 uv) {
+  return artex_sampleMain(uv.xy);
+}
+
+// Shadertoy raymarched "image extrusion"
+// Front camera + shadows + paper ripple distortion
+
+#define MAX_STEPS 180
+#define MAX_DIST  12.0
+#define SURF_EPS  0.0006
+
+float GET_H() { return 1.25 * max(0.01, uEffectParam3 * 2.0) * (0.1 + uAudioLevel); }
+const float BASE_Z       = 0.0;
+const float DOMAIN_HALF  = 1.0;
+const float GAMMA_FIX    = 2.2;
+const float SMOOTH_RAD   = 1.25;
+
+// Ripple controls
+float GET_RIPPLE() { return 0.08 * max(0.01, uEffectParam2 * 2.0); }
+const float RIPPLE_FREQ     = 4.0;
+float GET_SPEED() { return 0.6 * max(0.01, uEffectParam1 * 2.0); }
+
+float sat(float x){ return clamp(x, 0.0, 1.0); }
+float luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+vec3 tex0(vec2 uv){
+    uv = clamp(uv, 0.0, 1.0);
+    return artex_sampleMain( uv).rgb;
+}
+
+float hash(vec2 p){
+    return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);
+}
+
+// Smooth ripple field
+vec2 ripple(vec2 p){
+
+    float t = uTime * GET_SPEED();
+
+    float r1 = sin(p.y * RIPPLE_FREQ + t);
+    float r2 = cos(p.x * RIPPLE_FREQ * 0.8 - t*1.3);
+    float r3 = sin((p.x+p.y)*RIPPLE_FREQ*0.5 + t*0.7);
+
+    float combined = (r1 + r2 + r3) / 3.0;
+
+    vec2 dir = normalize(vec2(
+        cos(p.y*2.0 + t),
+        sin(p.x*2.0 - t)
+    ));
+
+    return dir * combined * GET_RIPPLE();
+}
+
+float heightFromImage(vec2 uv){
+
+    uv = clamp(uv, 0.0, 1.0);
+
+    // Safe fallback: iChannelResolution may be zero if not bound
+    vec2 texSize = max(iChannelResolution[0].xy, vec2(256.0));
+    vec2 r = SMOOTH_RAD / texSize;
+
+    float b = 0.0;
+    float w = 0.0;
+
+    // Gaussian 3x3 kernel — smoother height field than uniform weights
+    for(int y=-1;y<=1;y++)
+    for(int x=-1;x<=1;x++){
+        vec2 off = vec2(float(x), float(y)) * r;
+        float wt = exp(-0.5 * float(x*x + y*y));  // gaussian
+        b += luma(tex0(uv + off)) * wt;
+        w += wt;
+    }
+
+    b /= w;
+    b = pow(sat(b), GAMMA_FIX);
+    return b;
+}
+
+// Sobel-based texture-space normal for micro-surface detail
+vec3 texNormal(vec2 uv){
+    vec2 texSize = max(iChannelResolution[0].xy, vec2(256.0));
+    vec2 e = 2.0 / texSize;
+    float hL = heightFromImage(uv - vec2(e.x, 0.0));
+    float hR = heightFromImage(uv + vec2(e.x, 0.0));
+    float hD = heightFromImage(uv - vec2(0.0, e.y));
+    float hU = heightFromImage(uv + vec2(0.0, e.y));
+    // Scale tangent displacement by extrusion height for correct slope
+    return normalize(vec3((hL - hR) * GET_H() * 1.8,
+                          (hD - hU) * GET_H() * 1.8,
+                          e.x * 2.0));
+}
+
+// GGX (Trowbridge-Reitz) specular NDF
+float ggxNDF(float NdotH, float roughness){
+    float a2 = roughness * roughness * roughness * roughness;
+    float d  = NdotH * NdotH * (a2 - 1.0) + 1.0;
+    return a2 / max(3.14159265 * d * d, 1e-5);
+}
+
+vec2 worldToUV(vec2 xy){
+    return xy / (2.0*DOMAIN_HALF) + 0.5;
+}
+
+float sdf(vec3 p){
+
+    float bx = abs(p.x) - DOMAIN_HALF;
+    float by = abs(p.y) - DOMAIN_HALF;
+    float bxy = max(bx, by);
+
+    // Apply ripple distortion in world space
+    vec2 distortedXY = p.xy + ripple(p.xy);
+
+    vec2 uv = worldToUV(distortedXY);
+    float h = GET_H() * heightFromImage(uv);
+
+    float bottom = BASE_Z - p.z;
+    float top    = p.z - (BASE_Z + h);
+    float bz = max(top, bottom);
+
+    return max(bxy, bz);
+}
+
+vec3 calcNormal(vec3 p){
+    float e = 0.0012;
+    return normalize(vec3(
+        sdf(p+vec3(e,0,0)) - sdf(p-vec3(e,0,0)),
+        sdf(p+vec3(0,e,0)) - sdf(p-vec3(0,e,0)),
+        sdf(p+vec3(0,0,e)) - sdf(p-vec3(0,0,e))
+    ));
+}
+
+float softShadow(vec3 ro, vec3 rd){
+
+    float res = 1.0;
+    float t = 0.02;
+
+    for(int i=0;i<60;i++){
+        float h = sdf(ro + rd*t);
+        if(h < 0.0004) return 0.0;
+        res = min(res, 8.0*h/t);
+        t += clamp(h*0.7, 0.01, 0.25);
+        if(t > 6.0) break;
+    }
+
+    return clamp(res,0.0,1.0);
+}
+
+float ambientOcclusion(vec3 p, vec3 n){
+    float ao = 0.0;
+    float sca = 1.0;
+    for(int i=0;i<6;i++){
+        float h = 0.03 + 0.08*float(i);
+        float d = sdf(p + n*h);
+        ao += (h - d)*sca;
+        sca *= 0.7;
+    }
+    return clamp(1.0 - 1.2*ao, 0.0, 1.0);
+}
+
+bool raymarch(vec3 ro, vec3 rd, out vec3 hitPos){
+
+    float t = 0.0;
+
+    for(int i=0;i<MAX_STEPS;i++){
+        vec3 p = ro + rd*t;
+        float d = sdf(p);
+
+        if(d < SURF_EPS){
+            hitPos = p;
+            return true;
+        }
+
+        t += clamp(d*0.6, 0.002, 0.2);
+        if(t > MAX_DIST) break;
+    }
+
+    return false;
+}
+
+vec3 shade(vec3 ro, vec3 rd, vec3 p){
+
+    // SDF normal + texture-space micro-normal blend for surface detail
+    vec3 n = calcNormal(p);
+    vec2 uv = worldToUV(p.xy + ripple(p.xy));
+    vec3 tn = texNormal(uv);
+    n = normalize(n + tn * 0.55);
+
+    vec3 albedo = tex0(uv);
+    float height01 = sat((p.z - BASE_Z) / GET_H());
+
+    // Roughness: bright areas are shinier (glossy paint), dark areas matte
+    float roughness = mix(0.55, 0.12, sat(luma(albedo)));
+
+    // --- Lights: warm key + cool fill + ambient ---
+    vec3 lKey  = normalize(vec3( 0.8,  0.9,  0.55));
+    vec3 lFill = normalize(vec3(-0.6, -0.2,  0.50));
+    vec3 cKey  = vec3(1.00, 0.93, 0.80) * 1.4;
+    vec3 cFill = vec3(0.38, 0.55, 0.92) * 0.28;
+    vec3 cAmb  = vec3(0.05, 0.06, 0.10);
+
+    float shadow  = softShadow(p + n * 0.002, lKey);
+    float ao      = ambientOcclusion(p, n);
+    float cavity  = 0.55 + 0.45 * smoothstep(0.0, 1.0, height01);
+
+    float ndlKey  = max(dot(n, lKey),  0.0);
+    float ndlFill = max(dot(n, lFill), 0.0);
+    float NdotV   = max(dot(n, -rd),   0.0);
+
+    // Diffuse — key (shadowed) + fill + ambient
+    vec3 diffuse = albedo * (
+        ndlKey  * shadow * cKey +
+        ndlFill * cFill +
+        cAmb    * ao * cavity
+    );
+
+    // GGX specular on key light
+    vec3  hvec  = normalize(lKey - rd);
+    float NdotH = max(dot(n, hvec), 0.0);
+    float spec  = ggxNDF(NdotH, roughness) * 0.07 * shadow;
+    vec3  specCol = spec * mix(vec3(1.0), albedo, 0.45);
+
+    // Schlick fresnel rim
+    float fresnel = pow(1.0 - NdotV, 4.0);
+    vec3  rim     = fresnel * (cFill * 0.7 + vec3(0.6, 0.75, 1.0) * 0.15) * ao;
+
+    // Thin-slab SSS: bright, low-lying pixels transmit warm light
+    float sss = pow(sat(dot(-rd, lKey)), 2.5)
+              * sat(1.0 - height01)
+              * luma(albedo)
+              * shadow * 0.22;
+    vec3 sssCol = albedo * vec3(1.3, 0.85, 0.55) * sss;
+
+    // Combine
+    vec3 col = diffuse + specCol + rim + sssCol;
+
+    // Fog — slightly lighter than before so mid-range detail survives
+    float dist = length(p - ro);
+    float fog  = 1.0 - exp(-0.12 * dist * dist);
+    vec3  fogCol = vec3(0.012, 0.015, 0.022);
+    col = mix(col, fogCol, fog);
+
+    return col;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord){
+
+    vec2 uv = (fragCoord - 0.5*uResolution.xy)/uResolution.y;
+
+    vec3 ro = vec3(0.0, 0.0, 3.0);
+    vec3 target = vec3(0.0, 0.0, 0.0);
+
+    vec3 ww = normalize(target - ro);
+    vec3 uu = normalize(cross(vec3(0.0,1.0,0.0), ww));
+    vec3 vv = cross(ww, uu);
+
+    vec3 rd = normalize(uu*uv.x + vv*uv.y + ww*1.8);
+
+    vec3 hitPos;
+    vec3 col;
+
+    if(raymarch(ro, rd, hitPos)){
+        col = shade(ro, rd, hitPos);
+    }
+    else{
+        float v = 0.5 + 0.5*uv.y;
+        col = mix(vec3(0.01,0.012,0.015), vec3(0.03,0.035,0.04), v);
+    }
+
+    col = col/(1.0+col);
+    col = pow(col, vec3(1.0/2.2));
+
+    // Vignette
+    float vig = 1.0 - 0.38 * pow(length(uv) * 0.82, 2.2);
+    col *= vig;
+
+    col *= uEffectStrength;
+
+    fragColor = vec4(col, 1.0);
+}
+
+void main() {
+  vec4 fragColor;
+  vec2 fragCoord = gl_FragCoord.xy;
+  mainImage(fragColor, fragCoord);
+  gl_FragColor = fragColor;
+}

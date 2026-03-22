@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/creator/tsconfig.json" },
+    { "path": "./packages/artex-contract/tsconfig.json" },
+    { "path": "./packages/artex-core/tsconfig.json" },
+    { "path": "./packages/artex-shaders/tsconfig.json" },
+    { "path": "./packages/artex-extensions/tsconfig.json" },
+    { "path": "./packages/artex-experiments/tsconfig.json" }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@artex/shaders",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@artex/extensions": "0.0.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./builtin-shader-library": "./src/builtinShaderLibrary.ts",
+    "./shared-licenses": "./src/sharedShaderLicenses.ts",
+    "./hidden-builtin-shaders": "./src/hiddenBuiltinShaders.ts"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.30.0"
+  }
+}
