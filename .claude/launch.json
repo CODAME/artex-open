@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Vitest Watch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vitest", "watch", "--reporter=verbose"],
+      "port": 51204
+    }
+  ]
+}

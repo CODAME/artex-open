@@ -38,3 +38,4 @@ export * from "./sandboxes/three-renderer/index.js";
 export * from "./sandboxes/touchdesigner-bridge/index.js";
 export * from "./sandboxes/example-media-input/index.js";
 export * from "./sandboxes/sample-webcam-input/index.js";
+export * from "./sandboxes/sample-web-audio/index.js";
