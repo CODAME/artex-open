@@ -27,10 +27,22 @@ DCO sign-off required on all commits (`git commit -s`).
 
 ## Dev Setup
 
+This is a **library-only repository** — there is no runnable app or dev server
+in `artex-open`. The packages are consumed by the private ARTEX creator app.
+
 ```bash
+# Install all workspace dependencies
 npm install
+
+# Run the full test suite
 npm test
+
+# TypeScript build — must produce zero errors before a PR
+npm run build
 ```
+
+To preview shaders or experiments visually, use the hosted platform at
+[artex.art](https://artex.art). There is no local studio in this repo.
 
 ## License
 

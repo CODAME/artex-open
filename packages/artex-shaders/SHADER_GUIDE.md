@@ -13,7 +13,7 @@
    ARTEX-specific uniform conventions (see below).
 2. **Drop it** in `packages/artex-shaders/src/shaders/My Shader Name ARTEX.glsl`.
 3. **Add a description** in `builtinShaderLibrary.ts` (one line is enough).
-4. **Test locally** with `npm run dev` — open Studio and find your shader in the Shaders tab.
+4. **Verify** with `npm test && npm run build` — both must pass with zero errors.
 5. **Open a PR** — use the shader contribution issue template.
 
 ---
@@ -166,17 +166,18 @@ than what's auto-generated from the filename.
 
 ---
 
-## Local Testing
+## Testing
+
+`artex-open` is a library-only repo — there is no local dev server. Validate
+your shader with:
 
 ```bash
-# Start the dev server
-npm run dev
-
-# Open Studio in your browser
-# http://localhost:5173/studio
-
-# Click "Shaders" in the top panel — your shader should appear in the list.
+npm test
+npm run build
 ```
+
+For visual confirmation, open a PR. Once merged, your shader will appear in
+the Shaders panel at [artex.art](https://artex.art).
 
 ---
 
