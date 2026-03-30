@@ -177,7 +177,7 @@ npm run build
 ```
 
 For visual confirmation, open a PR. Once merged, your shader will appear in
-the Shaders panel at [artex.art](https://artex.art).
+the ARTEX Studio Shaders panel.
 
 ---
 

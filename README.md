@@ -1,6 +1,6 @@
 # ARTEX Open Layer
 
-This repository contains the open-layer packages of [ARTEX](https://artex.art) —
+This repository contains the open-layer packages of ARTEX —
 a creator tool for composing artist-authored interactive experiences.
 
 > **North star:** Everything serves living art.
@@ -41,8 +41,8 @@ npm test
 npm run build
 ```
 
-To preview shaders or experiments visually, use the hosted platform at
-[artex.art](https://artex.art). There is no local studio in this repo.
+To preview shaders or experiments visually, use the hosted ARTEX platform.
+There is no local studio in this repo.
 
 ## License
 

@@ -158,7 +158,7 @@ npm run build
 ```
 
 To preview your shader or experiment visually, open a PR — once merged it will
-appear in the ARTEX Studio shader library at [artex.art](https://artex.art).
+appear in the ARTEX Studio shader library.
 
 ### Run the full test suite
 
@@ -618,8 +618,7 @@ npm test
 npm run build
 ```
 For visual confirmation, the shader will appear in ARTEX Studio once your PR
-is merged and deployed to [artex.art](https://artex.art). There is no local
-studio in `artex-open`.
+is merged. There is no local studio in `artex-open`.
 
 **Q: Does ARTEX run without Firebase?**
 The open packages (`artex-contract`, `artex-shaders`, `artex-extensions`,
