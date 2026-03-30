@@ -18,7 +18,7 @@
     "publish": "changeset publish"
   },
   "devDependencies": {
-    "@changesets/cli": "^3.0.0",
+    "@changesets/cli": "^2.30.0",
     "vitest": "^4.0.0",
     "typescript": "^5.0.0"
   }
