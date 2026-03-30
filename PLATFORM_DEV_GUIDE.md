@@ -143,18 +143,22 @@ cd artex
 npm install
 ```
 
-### Start the dev server
+### Available scripts (open repo)
+
+`artex-open` is a library-only workspace — there is no dev server or runnable
+app in this repo. The creator studio (`apps/creator`) lives in the private
+monorepo.
 
 ```bash
-# Full creator studio (localhost, no Firebase required)
-npm run dev
+# Run all tests
+npm test
 
-# Open: http://localhost:5173/studio
+# TypeScript build — zero errors required
+npm run build
 ```
 
-ARTEX boots in **local demo mode** when no `VITE_FIREBASE_*` env vars are
-present. All project drafts, publishing, library templates, and feedback live
-in browser storage. This is the default for all contributor work.
+To preview your shader or experiment visually, open a PR — once merged it will
+appear in the ARTEX Studio shader library.
 
 ### Run the full test suite
 
@@ -608,14 +612,20 @@ packages (`artex-contract`, `artex-shaders`, `artex-extensions`,
 `artex-experiments`) can be forked and used under Apache 2.0.
 
 **Q: How do I test my shader before submitting?**
+Run the test suite and build check:
 ```bash
-npm run dev
-# Open http://localhost:5173/studio → Shaders tab → your shader appears
+npm test
+npm run build
 ```
+For visual confirmation, the shader will appear in ARTEX Studio once your PR
+is merged. There is no local studio in `artex-open`.
 
 **Q: Does ARTEX run without Firebase?**
-Yes. `npm run dev` boots in local demo mode — no Firebase credentials needed.
-Everything (drafts, library, publishing, feedback) uses browser storage.
+The open packages (`artex-contract`, `artex-shaders`, `artex-extensions`,
+`artex-experiments`) have no Firebase dependency — `npm test` and
+`npm run build` work out of the box with no credentials. The creator studio,
+which does use Firebase, is part of the private monorepo and is not available
+in `artex-open`.
 
 **Q: What's the difference between artex-extensions and artex-experiments?**
 `artex-extensions` is the **stable, versioned extension API** — code here
