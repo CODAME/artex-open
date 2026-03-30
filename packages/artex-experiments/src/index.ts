@@ -13,6 +13,7 @@ export const ARTexExperimentTrack = {
   threeRenderer: "three-renderer",
   touchDesignerBridge: "touchdesigner-bridge",
   mediaInputResearch: "media-input-research",
+  sampleExtensions: "sample-extensions",
 } as const;
 
 export type ArtexExperimentTrack =
@@ -36,3 +37,4 @@ export interface ExperimentModule {
 export * from "./sandboxes/three-renderer/index.js";
 export * from "./sandboxes/touchdesigner-bridge/index.js";
 export * from "./sandboxes/example-media-input/index.js";
+export * from "./sandboxes/sample-webcam-input/index.js";

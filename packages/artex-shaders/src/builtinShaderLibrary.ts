@@ -122,6 +122,15 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   "station-17-artex": {
     description: "ARTEX-compatible STATION 17 shader.",
   },
+  "sample-audio-reactive-artex": {
+    description: "Starter shader: audio-reactive chromatic aberration, bass warp, and transient flash.",
+  },
+  "sample-hello-world-artex": {
+    description: "Starter shader: minimal hue-shift and vignette — copy this as your base.",
+  },
+  "sample-proximity-bloom-artex": {
+    description: "Starter shader: proximity-driven soft bloom with mood tint and camera exposure.",
+  },
   sunshine: {
     description: "Warm sun rays and soft glow.",
   },
