@@ -128,8 +128,14 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   "sample-hello-world-artex": {
     description: "Starter shader: minimal hue-shift and vignette — copy this as your base.",
   },
+  "sample-flow-field-artex": {
+    description: "Starter shader: flow-field UV warp demonstrating uFlowEnabled, uFlowIntensity, uFlowSpeed, and uFlowScale with graceful passthrough when flow is off.",
+  },
   "sample-proximity-bloom-artex": {
     description: "Starter shader: proximity-driven soft bloom with mood tint and camera exposure.",
+  },
+  "sample-state-blend-artex": {
+    description: "Starter shader: state blending across up to 4 artwork states with mood-tinted edge-glow — shows the artex_blendStates / artex_sampleMain pattern.",
   },
   sunshine: {
     description: "Warm sun rays and soft glow.",
