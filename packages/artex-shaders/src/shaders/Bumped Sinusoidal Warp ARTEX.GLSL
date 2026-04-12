@@ -1,4 +1,24 @@
 precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 uniform float uTime;
 uniform float iTime;
 uniform vec2 uResolution;
@@ -314,33 +334,42 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 	
     // TEXTURE COLOR
     //
-	// Combining the surface postion with a fraction of the warped surface position to index 
-    // into the texture. The result is a slightly warped texture, as a opposed to a completely 
+	// Combining the surface postion with a fraction of the warped surface position to index
+    // into the texture. The result is a slightly warped texture, as a opposed to a completely
     // warped one. By the way, the warp function is called above in the "bumpFunc" function,
     // so it's kind of wasteful doing it again here, but the function is kind of cheap, and
     // it's more readable this way.
-    vec3 texCol = artex_sampleMain( sp.xy + W(sp.xy)/8.).xyz; 
-    texCol *= texCol; // Rough sRGB to linear conversion... That's a whole other conversation. :)
-    // A bit of color processing.
-    texCol = smoothstep(.05, .75, pow(texCol, vec3(.75, .8, .85)));    
-    
-    // Textureless. Simple and elegant... so it clearly didn't come from me. Thanks Fabrice. :)
-    //vec3 texCol = smoothFract( W(sp.xy).xyy )*.1 + .2;
-    
-	
-    
+
+    // Media presence detection
+    vec2 baseCheckUv = (fragCoord / uResolution.xy);
+    vec4 artwork = artex_sampleMain(baseCheckUv);
+    float mediaPresence = smoothstep(0.0, 0.05, artwork.a);
+    float strength = uEffectStrength;
+
+    vec3 mediaTexCol = artex_sampleMain( sp.xy + W(sp.xy)/8.).xyz;
+    mediaTexCol *= mediaTexCol; // Rough sRGB to linear conversion
+    mediaTexCol = smoothstep(.05, .75, pow(mediaTexCol, vec3(.75, .8, .85)));
+
+    // Standalone: procedural gradient/pattern from the warp function
+    vec3 standaloneTexCol = smoothFract( W(sp.xy).xyy )*.1 + .2;
+    standaloneTexCol = mix(vec3(.15, .2, .35), vec3(.6, .45, .25), standaloneTexCol.x * 2.0);
+
+    vec3 texCol = mix(standaloneTexCol, mediaTexCol, mediaPresence);
+
+
+
     // FINAL COLOR
-    // Using the values above to produce the final color.   
+    // Using the values above to produce the final color.
     vec3 col = (texCol*(diff*vec3(1, .97, .92)*2. + .5) + vec3(1, .6, .2)*spec*2.)*atten;
-    
-    // Faux environment mapping: I added this in at a later date out of sheer boredome, and  
+
+    // Faux environment mapping: I added this in at a later date out of sheer boredome, and
     // because I like shiny stuff. You can comment it out if it's not to your liking. :)
     float ref = max(dot(reflect(rd, sn), vec3(1)), 0.);
     col += col*pow(ref, 4.)*vec3(.25, .5, 1)*3.;
-    
 
-    // Perform some statistically unlikely (but close enough) 2.0 gamma correction. :) 
-	fragColor = vec4(sqrt(clamp(col * uEffectStrength * max(0.01, uEffectParam3), 0., 1.)), 1);
+
+    // Perform some statistically unlikely (but close enough) 2.0 gamma correction. :)
+	fragColor = vec4(sqrt(clamp(col * uEffectStrength * max(0.01, uEffectParam3), 0., 1.)), max(artwork.a, strength * (1.0 - mediaPresence)));
 }
 void main() {
   vec4 fragColor;

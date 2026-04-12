@@ -21,13 +21,11 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: {
         project: [
-          './apps/creator/tsconfig.node.json',
-          './apps/creator/tsconfig.app.json',
           './packages/artex-contract/tsconfig.json',
-          './packages/artex-core/tsconfig.json',
           './packages/artex-shaders/tsconfig.json',
           './packages/artex-extensions/tsconfig.json',
           './packages/artex-experiments/tsconfig.json',
+          './packages/artex-shader-tools/tsconfig.json',
         ],
         tsconfigRootDir: import.meta.dirname,
       },

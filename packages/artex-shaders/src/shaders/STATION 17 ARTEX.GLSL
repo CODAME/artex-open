@@ -1,4 +1,24 @@
 precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 uniform float uTime;
 uniform float iTime;
 uniform vec2 uResolution;
@@ -28,6 +48,24 @@ uniform float uEffectStrength;
 uniform float uEffectParam1;
 uniform float uEffectParam2;
 uniform float uEffectParam3;
+float tanhCompat(float x) {
+  float e = exp(-2.0 * abs(x));
+  float t = (1.0 - e) / max(1.0 + e, 1e-6);
+  return x < 0.0 ? -t : t;
+}
+
+vec2 tanhCompat(vec2 x) {
+  return vec2(tanhCompat(x.x), tanhCompat(x.y));
+}
+
+vec3 tanhCompat(vec3 x) {
+  return vec3(tanhCompat(x.x), tanhCompat(x.y), tanhCompat(x.z));
+}
+
+vec4 tanhCompat(vec4 x) {
+  return vec4(tanhCompat(x.x), tanhCompat(x.y), tanhCompat(x.z), tanhCompat(x.w));
+}
+
 vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
 vec4 tex2D(sampler2D s, vec3 uv) { return texture2D(s, uv.xy); }
 vec4 tex2D(sampler2D s, vec4 uv) { return texture2D(s, uv.xy); }
@@ -202,32 +240,51 @@ float wsNoise(vec3 dir, float rad) {
 rendering
 */
 
-void space(vec3 dir, vec3 pos, inout vec3 col) {
-    
-    // stars 
-    
+float proceduralField(vec3 s) {
+    float l = sNoise(s * 3.0 + 0.5);
+    s += 1.618; s *= 2.0;
+    l += sNoise(s * 3.0 + 1.2) * 0.5;
+    s += 1.618; s *= 2.0;
+    l += sNoise(s * 3.0 + 2.7) * 0.25;
+    s += 1.618; s *= 2.0;
+    l += sNoise(s * 3.0 + 4.1) * 0.125;
+    l /= 1.875; l *= l; l *= l;
+    return l;
+}
+
+void space(vec3 dir, vec3 pos, inout vec3 col, float mediaPresence) {
+
+    // stars
+
     float star = wsNoise(dir, 20.0);
     star *= 250.0; star = exp(-(star * star));
     col = star * grgb(252, 198, 3) * 8.0;
-    
+
     // wisps
-    
+
     vec3 s = dir * 0.2;
-    s += artex_sampleMain( s).brg * 0.04;
-    float l = artex_sampleMain( s).r;
-    s += 1.618; s *= 2.0; 
-    l += artex_sampleMain( s).r * 0.5;
-    s += 1.618; s *= 2.0; 
-    l += artex_sampleMain( s).r * 0.25;
-    s += 1.618; s *= 2.0; 
-    l += artex_sampleMain( s).r * 0.125;
-    l /= 1.875; l *= l; l *= l;
-    
+
+    // With media: use artwork samples
+    vec3 sMedia = s + artex_sampleMain( s).brg * 0.04;
+    float lMedia = artex_sampleMain( sMedia).r;
+    vec3 sTmpM = sMedia + 1.618; sTmpM *= 2.0;
+    lMedia += artex_sampleMain( sTmpM).r * 0.5;
+    sTmpM += 1.618; sTmpM *= 2.0;
+    lMedia += artex_sampleMain( sTmpM).r * 0.25;
+    sTmpM += 1.618; sTmpM *= 2.0;
+    lMedia += artex_sampleMain( sTmpM).r * 0.125;
+    lMedia /= 1.875; lMedia *= lMedia; lMedia *= lMedia;
+
+    // Standalone: procedural noise field
+    float lStandalone = proceduralField(s);
+
+    float l = mix(lStandalone, lMedia, mediaPresence);
+
     col *= exp(-l * 8.0);
-    
+
     col += (l * 8.0 + 0.2) * grgb(2, 64, 19) * 0.2;
     col += l *l * grgb(237, 172, 21);
-    
+
 
 }
 
@@ -243,23 +300,37 @@ float airmass(float s, float e, float a, float b) {
     return o;
 }
 
-void planetSurface(vec3 dir, inout vec3 albedo) {
+void planetSurface(vec3 dir, inout vec3 albedo, float mediaPresence) {
     albedo = grgb(242, 230, 160);
-    
+
     // cloud
-    
+
     vec3 s = dir * vec3(5.0, 20.0, 5.0);
-    s += artex_sampleMain( dir * 5.0).rgb * 0.65;
-    s += artex_sampleMain( dir * 2.0).rgb * 0.25;
-    s += artex_sampleMain( dir * 1.0).rgb * 0.5;
-    s += artex_sampleMain( s * 0.003).rgb * 5.0;
-    s += artex_sampleMain( s * 0.014 + vec3(0.618)).rgb * 2.5;
-    s += artex_sampleMain( s * 0.047 + 2.0 * vec3(0.618)).rgb * 3.0;
-    s += artex_sampleMain( dir * 1.0).rgb * 1.0;
-    s += artex_sampleMain( dir * 2.0).rgb * 0.5;
-    
-    float c = sNoise(s * 0.5  + uTime * 0.3 * uEffectParam1 + 0.4 );
-    albedo = mix(albedo, vec3(1.0) * (0.5 + c*c * 0.6), 
+
+    // With media
+    vec3 sMedia = s;
+    sMedia += artex_sampleMain( dir * 5.0).rgb * 0.65;
+    sMedia += artex_sampleMain( dir * 2.0).rgb * 0.25;
+    sMedia += artex_sampleMain( dir * 1.0).rgb * 0.5;
+    sMedia += artex_sampleMain( sMedia * 0.003).rgb * 5.0;
+    sMedia += artex_sampleMain( sMedia * 0.014 + vec3(0.618)).rgb * 2.5;
+    sMedia += artex_sampleMain( sMedia * 0.047 + 2.0 * vec3(0.618)).rgb * 3.0;
+    sMedia += artex_sampleMain( dir * 1.0).rgb * 1.0;
+    sMedia += artex_sampleMain( dir * 2.0).rgb * 0.5;
+
+    // Standalone: procedural turbulence
+    vec3 sStandalone = s;
+    sStandalone += vec3(sNoise(dir * 5.0), sNoise(dir * 5.0 + vec3(17.0)), sNoise(dir * 5.0 + vec3(31.0))) * 0.65;
+    sStandalone += vec3(sNoise(dir * 2.0 + vec3(7.0))) * 0.25;
+    sStandalone += vec3(sNoise(dir + vec3(13.0))) * 0.5;
+    sStandalone += vec3(sNoise(sStandalone * 0.003 + vec3(3.0))) * 5.0;
+    sStandalone += vec3(sNoise(sStandalone * 0.014 + vec3(0.618))) * 2.5;
+    sStandalone += vec3(sNoise(sStandalone * 0.047 + 2.0 * vec3(0.618))) * 3.0;
+
+    vec3 sMixed = mix(sStandalone, sMedia, mediaPresence);
+
+    float c = sNoise(sMixed * 0.5  + uTime * 0.3 * uEffectParam1 + 0.4 );
+    albedo = mix(albedo, vec3(1.0) * (0.5 + c*c * 0.6),
     clamp(c * 3.0 - 1.0, 0.0, 1.0) * 0.5 * max(0.0, uEffectParam3));
 
 }
@@ -267,19 +338,19 @@ void planetSurface(vec3 dir, inout vec3 albedo) {
 const vec3 plPos = vec3(-0.8, -0.3, 1.5);
 const float plRad = 0.7;
 
-void planet(vec3 dir, vec3 pos, inout vec3 col) {
-    
+void planet(vec3 dir, vec3 pos, inout vec3 col, float mediaPresence) {
+
     float proj = dot(plPos - pos, dir);
     vec3 o = plPos - pos - dir * proj;
     float a2 = plRad * plRad - dot(o,o);
-    
+
     vec3 hit; vec3 norm;
     if (a2 > 0.0) {
-    
+
         hit = plPos - o - sqrt(a2) * dir;
         norm = normalize(hit - plPos);
-        
-        vec3 albedo; planetSurface(norm, albedo);
+
+        vec3 albedo; planetSurface(norm, albedo, mediaPresence);
         col = albedo * 2.5;
         
         col *= max(dot(norm, sunDir()), 0.0);
@@ -308,7 +379,7 @@ void planet(vec3 dir, vec3 pos, inout vec3 col) {
     if (proj > 0.0) exC = -normalize(o);
     if (a2 > 0.0) exC = norm;
     float l = dot(exC, sunDir());
-    // WebGL1-safe equivalent of 0.5 + 0.5 * tanh(x): 1 / (1 + exp(-2x))
+    // WebGL1-safe equivalent of 0.5 + 0.5 * tanhCompat(x): 1 / (1 + exp(-2x))
     vec3 l2In = 4.0 * l - vec3(-0.2, 0.5, 0.8);
     vec3 l2 = 1.0 / (1.0 + exp(-2.0 * l2In));
     
@@ -464,49 +535,62 @@ void station(vec3 dir, vec3 pos, inout vec3 col) {
     }
 }
 
-void render(vec2 uv, inout vec3 col) {
-    
+void render(vec2 uv, inout vec3 col, float mediaPresence) {
+
     vec3 dir = normalize(vec3(uv, 1.0));
     vec3 pos = vec3(0.0);
-    
+
     col = vec3(0.0);
-    
-    space(dir, pos, col);
-    planet(dir, pos, col);
+
+    space(dir, pos, col, mediaPresence);
+    planet(dir, pos, col, mediaPresence);
     station(dir, pos, col);
-    
+
 }
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = fragCoord / uResolution.xy;
-    uv -= 0.5;
+    vec2 screenUv = fragCoord / uResolution.xy;
+
+    // Media presence detection
+    vec4 artwork = artex_sampleMain(screenUv);
+    float mediaPresence = smoothstep(0.0, 0.05, artwork.a);
+    float strength = uEffectStrength;
+
+    vec2 uv = screenUv - 0.5;
     uv.x *= uResolution.x / uResolution.y;
-    
+
     vec3 col = rgb(0, 0, 0);
-    
+
     // 4xAA
     vec3 tmp;
-    for (float x = 0.0; x < 2.0; x+=1.0) {
-        for (float y = 0.0; y < 2.0; y+=1.0) {
-            render(uv + vec2(x,y) / uResolution.xy * 0.5, tmp);
-            col += tmp * 0.25;
+    {
+  float x = 0.0;
+  for (int artexLoopIndex0 = 0; artexLoopIndex0 < 2; artexLoopIndex0++) {
+    if (!(x < 2.0)) break;
+    {
+            for (float y = 0.0; y < 2.0; y+=1.0) {
+                render(uv + vec2(x,y) / uResolution.xy * 0.5, tmp, mediaPresence);
+                col += tmp * 0.25;
+            }
         }
-    }
-    
+    x += 1.0;
+  }
+}
+
     // tone
-    // WebGL1-safe tanh approximation: tanh(x) = 2/(1+exp(-2x)) - 1
+    // WebGL1-safe tanh approximation: tanhCompat(x) = 2/(1+exp(-2x)) - 1
     vec3 toneIn = col + dot(col, col) * vec3(0.05);
     col = sqrt(2.0 / (1.0 + exp(-2.0 * toneIn)) - 1.0);
-    
+
     // fade
     float t = mod((uTime + 1.0) / 15.0, 4.0);
     t = fract(t + 0.5);
     col *= clamp(abs(t - 0.5) * 16.0,0.0, 1.0);
-    
+
     // mark
-    
+
     float f = length(fragCoord / uResolution.xy - vec2(0.5)) / 0.71;
     f *= f; f *= f; f *= 0.2;
     col.rg *= 1.0 - f; f *= 1.5;
@@ -516,8 +600,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if (mark < 1.0) {
         col = col * (1.0 - f) + f;
     }
-    
-    fragColor = vec4(col * uEffectStrength, 1.0);
+
+    fragColor = vec4(col * uEffectStrength, max(artwork.a, strength * (1.0 - mediaPresence)));
 }
 
 void main() {

@@ -34,8 +34,9 @@ const BUILTIN_SHADER_SOURCES: Record<string, string> = import.meta.glob("./shade
 });
 
 const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibraryMetadata>> = {
-  "2tc-15-fractal-complex-265ch-artex": {
-    description: "ARTEX-compatible fractal tunnel shader.",
+  "artex-living-field-v3": {
+    label: "ARTEX Living Field V3",
+    description: "Living light / living matter field with slow memory and presence-driven deformation.",
   },
   "anemone-dustfield-artex": {
     description: "Blue cup blooms with sparkling pollen dust.",
@@ -49,9 +50,6 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   "comic-wall-mosaic-artex": {
     description: "Pinned comic board mosaic with sketchy marker panels.",
   },
-  "exit-sunlight-artex": {
-    description: "ARTEX-compatible sunlight landscape shader.",
-  },
   "ghost-flora-column-artex": {
     description: "Translucent flora cluster with coral filament column.",
   },
@@ -59,7 +57,7 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
     description: "GIF-inspired tiled dancer wall with per-cell motion and silhouette edge glow.",
   },
   "golden-electric-spiral-artex": {
-    description: "ARTEX-compatible electric spiral shader.",
+    description: "Golden electric spiral that distorts the artwork with pulsing arcs and radial grid patterns.",
   },
   "golden-porous-rift-artex": {
     description: "Molten porous cavern with glowing golden ridges.",
@@ -79,6 +77,10 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   "kesson-kifs-fractal-artex": {
     description: "ARTEX-compatible KIFS fractal shader.",
   },
+  "kesson-voyage": {
+    label: "Kesson Voyage",
+    description: "Gyroid tunnel that warps the artwork through twisting organic corridors with glowing beam accents.",
+  },
   "kirby-jump-artex": {
     description: "ARTEX-compatible Kirby jump shader.",
   },
@@ -88,18 +90,18 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   "lupine-apparition-artex": {
     description: "Central lupine-like spike with layered ghost petals.",
   },
-  "mactuitui-filament-column-artex": {
-    description: "Dense luminous ribbon column modeled on the mactuitui reference clip.",
+  "filament-column-artex": {
+    description: "Dense luminous ribbon column with reactive filaments.",
   },
-  "mactuitui-masterpiece-mesh-artex": {
-    label: "Mactuitui Mesh A - Continuous Column",
-    description: "Version A. Keep the artwork as one continuous moving column inside the mactuitui structure.",
+  "masterpiece-mesh-artex": {
+    label: "Mesh A - Continuous Column",
+    description: "Version A. Keep the artwork as one continuous moving column inside the filament structure.",
   },
   "matrix-op-artex": {
-    description: "ARTEX-compatible matrix operator shader.",
+    description: "Menger fractal geometry that distorts and tints the artwork through recursive 3D structure.",
   },
   "moon-surface-ii-artex": {
-    description: "ARTEX-compatible moon surface shader.",
+    description: "Lunar terrain that sculpts the artwork with FBM-driven topography and depth lighting.",
   },
   "neon-botanical-filaments-artex": {
     description: "Generative translucent wireframe flower field.",
@@ -107,17 +109,14 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   "pastel-wave-trails-artex": {
     description: "Layered pastel wave ribbons with drifting shimmer and face-driven pull.",
   },
-  rain: {
-    description: "Layered rain streaks over the artwork.",
+  "primitive-intelligence-study-artex": {
+    description: "Near-black synthetic face study with reactive iris, harmonic shell, and sparse telemetry dust.",
   },
   "reactive-compute-splat-bloom-artex": {
     description: "Floating translucent particle veil with white micro-sparks and curl-like drift.",
   },
-  sampleinteractive: {
-    description: "Audio and proximity reactive glow.",
-  },
   "sixteen-segment-display-v4-artex": {
-    description: "ARTEX-compatible sixteen-segment display shader.",
+    description: "Neon 16-segment LED text overlaid on the artwork, reactive to audio and proximity.",
   },
   "station-17-artex": {
     description: "ARTEX-compatible STATION 17 shader.",
@@ -136,9 +135,6 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   },
   "sample-state-blend-artex": {
     description: "Starter shader: state blending across up to 4 artwork states with mood-tinted edge-glow — shows the artex_blendStates / artex_sampleMain pattern.",
-  },
-  sunshine: {
-    description: "Warm sun rays and soft glow.",
   },
   "verdant-synapse-web-artex": {
     description: "Green synaptic membrane network with bright nodes.",
@@ -192,7 +188,7 @@ export const BUILTIN_SHADER_LIBRARY_ITEMS: BuiltinShaderLibraryItem[] = Object.e
   .map(([path, source]) => {
     const filename = path.split("/").pop() ?? path;
     const baseName = stripShaderExtension(filename);
-    const id = toShaderSlug(filename);
+    const id = toShaderSlug(baseName);
     const metadata = BUILTIN_SHADER_LIBRARY_METADATA[id];
     const capabilities = inferBuiltinShaderCapabilities(source);
     const isGeneratedMotionShader = /-motion-\d+-artex$/.test(id);

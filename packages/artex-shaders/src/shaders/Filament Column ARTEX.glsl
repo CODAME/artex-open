@@ -1,6 +1,45 @@
-// Mactuitui Filament Column ARTEX.glsl
-// Reference: mactuitui_1772758310_3846497825966335158_3065232260.mp4
+// Filament Column ARTEX.glsl
+// Reference: source video reference
 precision mediump float;
+uniform float time;
+uniform float iTime;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec3 iResolution;
+uniform vec3 iChannelResolution[4];
+uniform sampler2D uMainImage;
+uniform vec2 uMainImageResolution;
+uniform sampler2D uStateA;
+uniform vec2 uStateAResolution;
+uniform sampler2D uStateB;
+uniform vec2 uStateBResolution;
+uniform sampler2D uStateC;
+uniform vec2 uStateCResolution;
+uniform sampler2D uStateD;
+uniform vec2 uStateDResolution;
+uniform sampler2D uMask;
+uniform sampler2D uState1;
+uniform sampler2D uState2;
+uniform int uUseStateBlending;
+uniform float uBlendFactor;
+uniform int uStateCount;
+uniform int uFlowEnabled;
+uniform float uFlowIntensity;
+uniform float uFlowSpeed;
+uniform float uFlowScale;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iDate;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 
 uniform float uTime;
 uniform vec2 uResolution;

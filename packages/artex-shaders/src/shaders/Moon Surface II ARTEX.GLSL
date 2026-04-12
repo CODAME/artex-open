@@ -1,4 +1,26 @@
+// Moon Surface II ARTEX — Terrain-warped artwork with lunar topography
+// Based on Nikos Papadopoulos (4rknova, 2015), rewritten for ARTEX compositing.
 precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 uniform float uTime;
 uniform float iTime;
 uniform vec2 uResolution;
@@ -28,139 +50,151 @@ uniform float uEffectStrength;
 uniform float uEffectParam1;
 uniform float uEffectParam2;
 uniform float uEffectParam3;
-// by Nikos Papadopoulos, 4rknova / 2015
-// Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 
-#define EPS		.001
-#define PI		3.14159265359
-#define RADIAN	180. / PI
-#define SPEED	25.
+// --- ARTEX helpers ---
+vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
 
-float hash(in float n) { return fract(sin(n)*43758.5453123); }
-
-float hash(vec2 p)
-{
-    return fract(sin(dot(p,vec2(127.1,311.7))) * 43758.5453123);
+float artex_hash(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-float noise(vec2 p)
-{
-    vec2 i = floor(p), f = fract(p); 
-	f *= f*(3.-2.*f);
-    
-    vec2 c = vec2(0,1);
-    
-    return mix(mix(hash(i + c.xx), 
-                   hash(i + c.yx), f.x),
-               mix(hash(i + c.xy), 
-                   hash(i + c.yy), f.x), f.y);
+float artex_noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = artex_hash(i);
+  float b = artex_hash(i + vec2(1.0, 0.0));
+  float c = artex_hash(i + vec2(0.0, 1.0));
+  float d = artex_hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-float fbm(in vec2 p)
-{
-	return	.5000 * noise(p)
-		   +.2500 * noise(p * 2.)
-		   +.1250 * noise(p * 4.)
-		   +.0625 * noise(p * 8.);
+vec2 artex_applyFlow(vec2 uv) {
+  if (uFlowEnabled != 1) return uv;
+  vec2 p = uv * uFlowScale;
+  float nx = artex_noise(p + vec2(10.0, 0.0) + uTime * uFlowSpeed);
+  float ny = artex_noise(p + vec2(0.0, 10.0) + uTime * uFlowSpeed);
+  return uv + vec2((nx - 0.5), (ny - 0.5)) * uFlowIntensity * 0.15;
 }
 
-float dst(vec3 p)
-{
-	return dot(vec3(p.x, p.y
-                    * max(0.01, uEffectParam2 * 2.0)
-                    + 0.45 * fbm(p.zx) 
-                    + 2.55 * noise(.1 * p.xz) 
-                    + 0.83 * noise(.4 * p.xz)
-                    + 3.33 * noise(.001 * p.xz)
-                    + 3.59 * noise(.0005 * (p.xz + 132.453)) 
-                    , p.z),  vec3(0.,1.,0.));	
+vec4 artex_blendStates(vec2 uv) {
+  if (uUseStateBlending != 1) return tex2D(uMainImage, uv);
+  if (uStateCount <= 1) return tex2D(uStateA, uv);
+  if (uStateCount == 2) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor);
+  if (uStateCount == 3) {
+    if (uBlendFactor < 0.5) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 2.0);
+    return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - 0.5) * 2.0);
+  }
+  float t3 = 1.0 / 3.0;
+  if (uBlendFactor < t3) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 3.0);
+  if (uBlendFactor < t3 * 2.0) return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - t3) * 3.0);
+  return mix(tex2D(uStateC, uv), tex2D(uStateD, uv), (uBlendFactor - t3 * 2.0) * 3.0);
 }
 
-vec3 nrm(vec3 p, float d)
-{
-	return normalize(
-			vec3(dst(vec3(p.x + EPS, p.y, p.z)),
-    			 dst(vec3(p.x, p.y + EPS, p.z)),
-    			 dst(vec3(p.x, p.y, p.z + EPS))) - d);
+vec4 artex_sampleMain(vec2 uv) {
+  return artex_blendStates(artex_applyFlow(uv));
 }
 
-bool rmarch(vec3 ro, vec3 rd, out vec3 p, out vec3 n)
-{
-	p = ro;
-	vec3 pos = p;
-	float d = 1.;
+// --- Terrain noise ---
+#define SPEED 25.0
 
-	int maxSteps = int(64.0 * max(0.1, uEffectParam3 * 1.5));
-	for (int i = 0; i < 150; i++) {
-		if(i > maxSteps) break;
-		d = dst(pos);
-
-		if (d < EPS) {
-			p = pos;
-			break;
-		}
-		pos += d * rd;
-	}
-	
-	n = nrm(p, d);
-	return d < EPS;
+float fbm(vec2 p) {
+  return 0.5000 * artex_noise(p)
+       + 0.2500 * artex_noise(p * 2.0)
+       + 0.1250 * artex_noise(p * 4.0)
+       + 0.0625 * artex_noise(p * 8.0);
 }
 
-vec4 render(vec2 uv)
-{
-    float t = uTime;
-    
-    vec2 uvn = (uv) * vec2(uResolution.x / uResolution.y, 1.);
-	
-    float vel = SPEED * t * uEffectParam1;
-    
-	vec3 cu = vec3(2. * noise(vec2(.3 * t)) - 1.,1., 1. * fbm(vec2(.8 * t)));
-	vec3 cp = vec3(0, 3.1 + noise(vec2(t)) * 3.1, vel);
-	vec3 ct = vec3(1.5 * sin(t), 
-				   -2. + cos(t) + fbm(cp.xz) * .4, 13. + vel);
-		
-	vec3 ro = cp,
-		 rd = normalize(vec3(uvn, 1. / tan(60. * RADIAN)));
-	
-	vec3 cd = ct - cp,
-		 rz = normalize(cd),
-		 rx = normalize(cross(rz, cu)),
-		 ry = normalize(cross(rx, rz));
-
-	rd = normalize(mat3(rx, ry, rz) * rd);
-    
-
-	vec3 sp, sn;
-	vec3 col = (rmarch(ro, rd, sp, sn) ?
-		  vec3(.6) * dot(sn, normalize(vec3(cp.x, cp.y + .5, cp.z) - sp))
-		: vec3(0.));
-	
-	return vec4(col, length(ro-sp));
+float terrain(vec3 p) {
+  float heightScale = max(0.01, uEffectParam2 * 2.0);
+  return dot(vec3(p.x, p.y * heightScale
+    + 0.45 * fbm(p.zx)
+    + 2.55 * artex_noise(0.1 * p.xz)
+    + 0.83 * artex_noise(0.4 * p.xz)
+    + 3.33 * artex_noise(0.001 * p.xz), p.z), vec3(0.0, 1.0, 0.0));
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord)
-{
-    vec2 uv = fragCoord.xy / uResolution.xy * 2. - 1.;
-        
-    if (abs(EPS + uv.y) >= .7) { 
-		fragColor = vec4(0,0,0,1);
-        return;
-	}
-	
-    vec4 res = render(uv);
-    
-    vec3 col = res.xyz;
-    
-    col *= 1.75 * smoothstep(length(uv) * .35, .75, .4);
-    float noise = hash((hash(uv.x) + uv.y) * uTime) * .15;
-	col += noise;
-	col *= smoothstep(EPS, 3.5, uTime);
-
-    fragColor = vec4(col * uEffectStrength, 1);
+vec3 terrainNormal(vec3 p, float d) {
+  const float eps = 0.001;
+  return normalize(vec3(
+    terrain(vec3(p.x + eps, p.y, p.z)),
+    terrain(vec3(p.x, p.y + eps, p.z)),
+    terrain(vec3(p.x, p.y, p.z + eps))) - d);
 }
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 baseUv = fragCoord.xy / uResolution.xy;
+  vec2 uv = baseUv * 2.0 - 1.0;
+
+  if (abs(0.001 + uv.y) >= 0.7) {
+    fragColor = artex_sampleMain(baseUv);
+    return;
+  }
+
+  vec2 uvn = uv * vec2(uResolution.x / uResolution.y, 1.0);
+  float vel = SPEED * uTime * uEffectParam1;
+
+  vec3 cu = vec3(2.0 * artex_noise(vec2(0.3 * uTime)) - 1.0, 1.0, fbm(vec2(0.8 * uTime)));
+  vec3 cp = vec3(0.0, 3.1 + artex_noise(vec2(uTime)) * 3.1, vel);
+  vec3 ct = vec3(1.5 * sin(uTime), -2.0 + cos(uTime) + fbm(cp.xz) * 0.4, 13.0 + vel);
+
+  vec3 ro = cp;
+  vec3 rd = normalize(vec3(uvn, 1.0 / tan(60.0 * 3.14159265 / 180.0)));
+
+  vec3 rz = normalize(ct - cp);
+  vec3 rx = normalize(cross(rz, cu));
+  vec3 ry = normalize(cross(rx, rz));
+  rd = normalize(mat3(rx, ry, rz) * rd);
+
+  // March — reduced from 150 to 48 steps
+  vec3 pos = ro;
+  float d = 1.0;
+  int maxSteps = int(48.0 * max(0.1, uEffectParam3 * 1.5));
+  for (int i = 0; i < 48; i++) {
+    if (i >= maxSteps) break;
+    d = terrain(pos);
+    if (d < 0.001) break;
+    pos += d * rd;
+  }
+
+  bool hit = d < 0.001;
+  vec3 sn = terrainNormal(pos, d);
+
+  // Lighting value for terrain shape
+  float light = hit ? dot(sn, normalize(vec3(cp.x, cp.y + 0.5, cp.z) - pos)) : 0.0;
+  light = clamp(light, 0.0, 1.0);
+
+  // Sample artwork at its true UV — no resizing
+  float depthFade = hit ? 1.0 : 0.0;
+  vec4 artwork = artex_sampleMain(baseUv);
+  float mediaPresence = smoothstep(0.0, 0.05, artwork.a);
+
+  // Standalone terrain visual: grey moonscape with lighting
+  vec3 terrainColor = vec3(0.25 + light * 0.55) * depthFade;
+  terrainColor += vec3(0.12, 0.10, 0.15) * (1.0 - depthFade); // sky
+
+  // Composite: terrain lighting sculpts the artwork when present
+  float strength = clamp(uEffectStrength, 0.0, 1.0);
+  vec3 withMedia = artwork.rgb * mix(vec3(1.0), vec3(0.4 + light * 0.8), strength * depthFade);
+  vec3 col = mix(terrainColor * strength, withMedia, mediaPresence);
+
+  // Vignette
+  col *= 1.75 * smoothstep(length(uv) * 0.35, 0.75, 0.4);
+
+  // Subtle grain
+  float grain = artex_hash((artex_hash(vec2(uv.x, 0.0)) + uv.y) * uTime + 0.1) * 0.08;
+  col += grain * strength;
+
+  // Audio: deepen shadows on bass
+  col *= 1.0 - uBassLevel * 0.15 * (1.0 - light) * strength;
+
+  col *= smoothstep(0.001, 3.5, uTime);
+
+  fragColor = vec4(col, max(artwork.a, strength * (1.0 - mediaPresence)));
+}
+
 void main() {
   vec4 fragColor;
-  vec2 fragCoord = gl_FragCoord.xy;
-  mainImage(fragColor, fragCoord);
+  mainImage(fragColor, gl_FragCoord.xy);
   gl_FragColor = fragColor;
 }

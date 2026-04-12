@@ -1,0 +1,17 @@
+{
+  "name": "@artex/shader-tools",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Shader conversion, validation, suggestion, and template generation for ARTEX-compatible GLSL shaders.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@artex/shaders": "0.0.0"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

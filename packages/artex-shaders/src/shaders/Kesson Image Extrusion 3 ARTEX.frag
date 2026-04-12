@@ -1,4 +1,24 @@
 precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 uniform float uTime;
 uniform float iTime;
 uniform vec2 uResolution;
@@ -146,7 +166,19 @@ float luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
 vec3 tex0(vec2 uv){
     uv = clamp(uv, 0.0, 1.0);
-    return artex_sampleMain( uv).rgb;
+    vec4 s = artex_sampleMain(uv);
+    // If no media loaded, generate procedural color/height
+    if (s.a < 0.01) {
+        float n1 = artex_noise(uv * 8.0 + vec2(uTime * 0.1));
+        float n2 = artex_noise(uv * 4.0 + vec2(0.0, uTime * 0.07));
+        float n3 = artex_noise(uv * 12.0);
+        return vec3(
+            0.3 + 0.4 * n1,
+            0.25 + 0.35 * n2,
+            0.35 + 0.4 * n3
+        );
+    }
+    return s.rgb;
 }
 
 float hash(vec2 p){
@@ -394,9 +426,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float vig = 1.0 - 0.38 * pow(length(uv) * 0.82, 2.2);
     col *= vig;
 
+    // mediaPresence crossfade for standalone mode
+    vec2 baseUv = fragCoord / uResolution.xy;
+    vec4 artworkCheck = artex_sampleMain(baseUv);
+    float mediaPresence = smoothstep(0.0, 0.05, artworkCheck.a);
     col *= uEffectStrength;
-
-    fragColor = vec4(col, 1.0);
+    fragColor = vec4(col, max(artworkCheck.a, uEffectStrength * (1.0 - mediaPresence)));
 }
 
 void main() {

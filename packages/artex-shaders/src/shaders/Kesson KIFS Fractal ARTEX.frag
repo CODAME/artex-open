@@ -1,4 +1,24 @@
 precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 uniform float uTime;
 uniform float iTime;
 uniform vec2 uResolution;
@@ -162,12 +182,32 @@ vec2 st(vec2 uv) {
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-    
-    vec2 uv = (fragCoord.xy - 0.5 * uResolution.xy) / uResolution.y;
-    
-    vec3 col = artex_sampleMain( st(uv) + 0.25).rgb * max(0.01, uEffectParam3 * 1.5);
 
-    fragColor = vec4(col * uEffectStrength, 1.0);
+    vec2 uv = (fragCoord.xy - 0.5 * uResolution.xy) / uResolution.y;
+    vec2 baseUv = fragCoord.xy / uResolution.xy;
+
+    vec2 fractalUv = st(uv);
+    float intensity = max(0.01, uEffectParam3 * 1.5);
+
+    // Check if media is loaded
+    vec4 baseArtwork = artex_sampleMain(baseUv);
+    float mediaPresence = smoothstep(0.0, 0.05, baseArtwork.a);
+
+    // With media: sample artwork through fractal UVs
+    vec3 withMedia = artex_sampleMain(fractalUv + 0.25).rgb * intensity;
+
+    // Standalone: generate color from fractal geometry itself
+    float fractalDist = length(fractalUv);
+    vec3 standalone = vec3(
+      0.4 + 0.4 * sin(fractalDist * 12.0 + uTime * 0.5),
+      0.3 + 0.3 * sin(fractalDist * 8.0 + uTime * 0.7 + 2.0),
+      0.5 + 0.4 * sin(fractalDist * 10.0 + uTime * 0.3 + 4.0)
+    ) * intensity;
+    standalone *= smoothstep(0.5, 0.0, fractalDist);
+
+    vec3 col = mix(standalone, withMedia, mediaPresence) * uEffectStrength;
+
+    fragColor = vec4(col, 1.0);
 
 }
 void main() {

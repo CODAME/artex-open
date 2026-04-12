@@ -5,6 +5,26 @@
 // kirby shader thing but without the "knob"
 
 precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 uniform float iTime;
 uniform vec3 iResolution;
 uniform vec3 iChannelResolution[4];
@@ -399,8 +419,19 @@ void main()
   mainImage(shadeColor, gl_FragCoord.xy);
 
   vec2 uv = gl_FragCoord.xy / uResolution.xy;
-  vec3 base = artex_sampleMain( uv).rgb;
-  vec3 mixed = mix(base, shadeColor.rgb, clamp(uEffectStrength, 0.0, 1.0));
 
-  gl_FragColor = vec4(mixed * uEffectStrength, 1.0);
+  // Media presence detection
+  vec4 artwork = artex_sampleMain(uv);
+  float mediaPresence = smoothstep(0.0, 0.05, artwork.a);
+  float strength = uEffectStrength;
+
+  // With media: mix base artwork with shader output
+  vec3 withMedia = mix(artwork.rgb, shadeColor.rgb, clamp(uEffectStrength, 0.0, 1.0));
+  withMedia *= uEffectStrength;
+
+  // Standalone: use shader procedural output directly
+  vec3 standalone = shadeColor.rgb;
+
+  vec3 col = mix(standalone, withMedia, mediaPresence);
+  gl_FragColor = vec4(col, max(artwork.a, strength * (1.0 - mediaPresence)));
 }

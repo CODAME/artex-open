@@ -8,10 +8,12 @@
     "packages/artex-contract",
     "packages/artex-shaders",
     "packages/artex-extensions",
-    "packages/artex-experiments"
+    "packages/artex-experiments",
+    "packages/artex-shader-tools"
   ],
   "scripts": {
-    "test": "npm run test --workspaces --if-present",
+    "check:boundaries": "node scripts/check_workspace_boundaries.mjs",
+    "test": "npm run check:boundaries && npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "changeset": "changeset",
     "version": "changeset version",

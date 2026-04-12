@@ -1,6 +1,30 @@
 // Reactive Compute Splat Bloom ARTEX.glsl
 // Floating translucent particle veil inspired by suspended liquid curl references.
 precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform sampler2D uMask;
+uniform sampler2D uState1;
+uniform sampler2D uState2;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iDate;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 
 uniform float iTime;
 uniform vec3 iResolution;
@@ -30,6 +54,10 @@ uniform float uEffectParam1;
 uniform float uEffectParam2;
 uniform float uEffectParam3;
 uniform sampler2D uMainImage;
+
+vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
+vec4 tex2D(sampler2D s, vec3 uv) { return texture2D(s, uv.xy); }
+vec4 tex2D(sampler2D s, vec4 uv) { return texture2D(s, uv.xy); }
 
 float artex_hash(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
@@ -77,28 +105,28 @@ vec2 artex_applyFlow(vec2 uv) {
 
 vec4 artex_blendStates(vec2 uv) {
   if (uUseStateBlending != 1) {
-    return texture2D(uMainImage, uv);
+    return tex2D(uMainImage, uv);
   }
 
   if (uStateCount <= 1) {
-    return texture2D(uStateA, uv);
+    return tex2D(uStateA, uv);
   } else if (uStateCount == 2) {
-    return mix(texture2D(uStateA, uv), texture2D(uStateB, uv), uBlendFactor);
+    return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor);
   } else if (uStateCount == 3) {
     if (uBlendFactor < 0.5) {
-      return mix(texture2D(uStateA, uv), texture2D(uStateB, uv), uBlendFactor * 2.0);
+      return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 2.0);
     }
-    return mix(texture2D(uStateB, uv), texture2D(uStateC, uv), (uBlendFactor - 0.5) * 2.0);
+    return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - 0.5) * 2.0);
   }
 
   float third = 1.0 / 3.0;
   float twoThirds = 2.0 / 3.0;
   if (uBlendFactor < third) {
-    return mix(texture2D(uStateA, uv), texture2D(uStateB, uv), uBlendFactor * 3.0);
+    return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 3.0);
   } else if (uBlendFactor < twoThirds) {
-    return mix(texture2D(uStateB, uv), texture2D(uStateC, uv), (uBlendFactor - third) * 3.0);
+    return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - third) * 3.0);
   }
-  return mix(texture2D(uStateC, uv), texture2D(uStateD, uv), (uBlendFactor - twoThirds) * 3.0);
+  return mix(tex2D(uStateC, uv), tex2D(uStateD, uv), (uBlendFactor - twoThirds) * 3.0);
 }
 
 vec4 artex_sampleMain(vec2 uv) {

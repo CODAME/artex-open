@@ -1,14 +1,26 @@
+// Kesson Voyage ARTEX — Gyroid tunnel artwork warper
+// Rewritten for ARTEX compositing with reduced ray march steps.
 precision mediump float;
-
-#define RAYMARCH_MAX_STEPS 150
-#define RAYMARCH_MAX_DIST 20.
-#define RAYMARCH_SURFACE_DIST 0.00001
-#define SPEED 0.25
-#define ROTSPEED 0.15
-#define CAMDIST 4.0
-#define colorB vec3(0.1, 0.72, 1.0)
-
-precision mediump float;
+uniform float time;
+uniform float uTargetAspect;
+uniform float targetAspect;
+uniform vec2 uMainImageResolution;
+uniform vec2 uStateAResolution;
+uniform vec2 uStateBResolution;
+uniform vec2 uStateCResolution;
+uniform vec2 uStateDResolution;
+uniform vec4 uMediaTransform;
+uniform vec4 u_mediaTransform;
+uniform int uMediaTransformMainEnabled;
+uniform vec4 iMouse;
+uniform vec2 uLeftEye;
+uniform vec2 uRightEye;
+uniform vec2 uFaceCenter;
+uniform float uHasFace;
+uniform vec2 leftEye;
+uniform vec2 rightEye;
+uniform vec2 faceCenter;
+uniform float hasFace;
 uniform float uTime;
 uniform float iTime;
 uniform vec2 uResolution;
@@ -39,180 +51,205 @@ uniform float uEffectParam1;
 uniform float uEffectParam2;
 uniform float uEffectParam3;
 
-float origgsize = 0.5;
-float fov = 1.0;
+// --- ARTEX helpers ---
+vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
 
-float tmpo = 0.0;
-float trianglesBeams = 0.0;
+float artex_hash(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
 
-mat2 rotate(float a) {
-    float s = sin(a), c = cos(a);
-    return mat2(c, -s, s, c);
+float artex_noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = artex_hash(i);
+  float b = artex_hash(i + vec2(1.0, 0.0));
+  float c = artex_hash(i + vec2(0.0, 1.0));
+  float d = artex_hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+vec2 artex_applyFlow(vec2 uv) {
+  if (uFlowEnabled != 1) return uv;
+  vec2 p = uv * uFlowScale;
+  float nx = artex_noise(p + vec2(10.0, 0.0) + uTime * uFlowSpeed);
+  float ny = artex_noise(p + vec2(0.0, 10.0) + uTime * uFlowSpeed);
+  return uv + vec2((nx - 0.5), (ny - 0.5)) * uFlowIntensity * 0.15;
+}
+
+vec4 artex_blendStates(vec2 uv) {
+  if (uUseStateBlending != 1) return tex2D(uMainImage, uv);
+  if (uStateCount <= 1) return tex2D(uStateA, uv);
+  if (uStateCount == 2) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor);
+  if (uStateCount == 3) {
+    if (uBlendFactor < 0.5) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 2.0);
+    return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - 0.5) * 2.0);
+  }
+  float t3 = 1.0 / 3.0;
+  if (uBlendFactor < t3) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 3.0);
+  if (uBlendFactor < t3 * 2.0) return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - t3) * 3.0);
+  return mix(tex2D(uStateC, uv), tex2D(uStateD, uv), (uBlendFactor - t3 * 2.0) * 3.0);
+}
+
+vec4 artex_sampleMain(vec2 uv) {
+  return artex_blendStates(artex_applyFlow(uv));
+}
+
+// --- Gyroid tunnel ---
+#define SPEED 0.25
+#define ROTSPEED 0.15
+#define CAMDIST 4.0
+
+mat2 rot(float a) {
+  float s = sin(a), c = cos(a);
+  return mat2(c, -s, s, c);
 }
 
 float repeat(float p, float s) {
-    return (fract(p / s - 0.5) - 0.5) * s;
+  return (fract(p / s - 0.5) - 0.5) * s;
 }
 
 vec3 tunnel(vec3 p) {
-    vec3 off = vec3(0.0);
-    float dd = p.z * 0.005;  // linear — no floor/smoothstep stepping
-    dd *= 20.1;
-    dd += uTime * 0.25;
-    off.x += sin(dd) * 6.0;
-    off.y = sin(dd * 0.7) * 6.0;
-    return off;
+  float dd = p.z * 0.005 * 20.1 + uTime * 0.25;
+  return vec3(sin(dd) * 6.0, sin(dd * 0.7) * 6.0, 0.0);
 }
 
 vec3 navigate(vec3 p) {
-    p += tunnel(p);
-    p.xy *= rotate((p.z * ROTSPEED) + (uTime * ROTSPEED));
-    p.y -= 0.3;
-    return p;
+  p += tunnel(p);
+  p.xy *= rot((p.z + uTime) * ROTSPEED);
+  p.y -= 0.3;
+  return p;
 }
 
 float sdGyroid(vec3 p, float scale, float thickness, float bias, float lx, float ly) {
-    vec3 p2 = p;
-    p2 *= scale;
-    p2.z = sin(p2.z);
-    p2.z += 10.0;
-    float ls = max(lx, ly);
-    float gyroid = abs(dot(sin(p2 * lx), cos(p2.zxy * ly)) - bias) / (scale * ls) - thickness;
-    return gyroid;
+  vec3 p2 = p * scale;
+  p2.z = sin(p2.z) + 10.0;
+  float ls = max(lx, ly);
+  return abs(dot(sin(p2 * lx), cos(p2.zxy * ly)) - bias) / (scale * ls) - thickness;
 }
 
 float smin(float a, float b, float h) {
-    float k = clamp((a - b) / h * 0.5 + 0.5, 0.0, 1.0);
-    return mix(a, b, k) - k * (1.0 - k) * h;
+  float k = clamp((a - b) / h * 0.5 + 0.5, 0.0, 1.0);
+  return mix(a, b, k) - k * (1.0 - k) * h;
 }
 
 float sdTriPrism(vec3 p, vec2 h) {
-    vec3 q = abs(p);
-    return max(q.z - h.y, max(q.x * 0.866025 + p.y * 0.5, -p.y) - h.x * 0.5);
+  vec3 q = abs(p);
+  return max(q.z - h.y, max(q.x * 0.866025 + p.y * 0.5, -p.y) - h.x * 0.5);
 }
 
-// Returns a pseudo-random vec2 in [0, 1] from a float seed in [0, 1]
-vec2 randomVec2(float seed) {
-    float x = fract(sin(seed * 127.1) * 43758.5453);
-    float y = fract(sin(seed * 311.7) * 43758.5453);
-    return vec2(x, y);
-}
+float beamAccum = 0.0;
 
 float getDist(vec3 p) {
-    vec3 pc = p;
+  vec3 pc = p;
+  p.z += uTime * SPEED;
+  p -= tunnel(p);
+  vec3 p2 = navigate(p - tunnel(p));
+  vec3 pg = p2;
+  pg.xy *= rot(pg.z * 0.0001);
 
-    p.z += uTime * SPEED;
+  float lz = fract((p.z / 100.0) * 0.02);
+  float t = uTime;
+  float lx = 6.0 + (sin((lz + t) * 0.2576) * 0.5 + 0.5);
+  float ly = 5.0 + (cos((lz + t) * 0.1987) * 0.5 + 0.5);
+  float g1 = sdGyroid(pg, 0.5, 0.1, 1.4, lx, ly) * 0.8;
 
-    p -= tunnel(p);
-    vec3 p2 = p;
-    vec3 ps = p2;
-    ps += tunnel(ps);
-    p2 = navigate(p2);
+  // Reduced from 8 to 4 detail octaves
+  float v = 10.63748;
+  float m = 0.5;
+  for (int i = 0; i < 4; i++) {
+    g1 -= sdGyroid(p2, v, 0.03, 0.3, 1.0, 1.0) * m;
+    v *= 2.0;
+    m *= 0.85;
+  }
 
-    vec3 pg = p2;
-    pg.xy *= rotate(pg.z * 0.0001);
-    float lz = fract((p.z / 100.0) * 0.02);
-    float t = uTime;//pow(uTime, 0.6);
-    vec2 rndLs = randomVec2(uEffectParam1); // [0, 1] from uEffectParam1
-    float lx = 1.0 + 5.0 + ((sin((lz + t) * 0.2576) * 0.5) + 0.5); // [1, 10]
-    float ly = 1.0 + 4.0 + ((cos((lz + t) * 0.1987) * 0.5) + 0.5); // [1, 10]
-    float g1 = sdGyroid(pg, origgsize, 0.1, 1.4, lx, ly);
-    g1 *= 0.8;
+  float camera = length(pc - vec3(0.0, 0.0, -CAMDIST)) - 0.2;
+  g1 = max(g1, -camera);
 
-    float v = 10.63748;
-    float m = 0.5;
-    for(int i = 0; i < 8; i++) {
-        g1 -= sdGyroid(p2, v, 0.03, 0.3, 1.0, 1.0) * m;
-        v *= 2.0;
-        m *= 0.85;
-    }
+  vec3 ps = p;
+  ps += tunnel(ps);
+  ps.z = repeat(ps.z, 30.0);
+  ps.xy *= rot(ps.z * 0.1);
+  float c11 = sdTriPrism(ps, vec2(1.0, 15.0));
+  float c12 = sdTriPrism(ps, vec2(0.9, 30.0));
+  float cc1 = max(c11, -c12);
 
-    float camera = length(pc - vec3(0.0, 0.0, -CAMDIST)) - 0.2;
-    g1 = max(g1, -camera);
-
-    vec2 rndTunnel = randomVec2(uEffectParam2); // [0, 1] from uEffectParam2
-    float tunnelX = 30.0;// + rndTunnel.x * 40.0;  // [1, 10]
-    float tunnelY = 15.0;// + rndTunnel.y * 20.0;  // [1, 10]
-
-    ps.z = repeat(ps.z, tunnelX);
-
-    ps.xy *= rotate(ps.z * 0.1);
-    float c11 = sdTriPrism(ps, vec2(1.0, tunnelY));
-    float c12 = sdTriPrism(ps, vec2(0.9, tunnelX));
-    float cc1 = max(c11, -c12);
-
-    float d1 = g1;
-    d1 = smin(d1, cc1, 0.2);
-
-    tmpo = cc1;//0.02/(0.02+cc);
-    d1 = min(d1, cc1);
-    trianglesBeams += 0.01 / (0.08 + tmpo);
-
-    return d1;
-
-}
-
-float rayMarch(vec3 ro, vec3 rd) {
-    float dO = RAYMARCH_SURFACE_DIST;
-
-    for(int i = 0; i < RAYMARCH_MAX_STEPS; i++) {
-        vec3 p = ro + rd * dO;
-        float dS = getDist(p);
-        dO += dS;
-        if(dO > RAYMARCH_MAX_DIST || dS < RAYMARCH_SURFACE_DIST)
-            break;
-    }
-
-    return dO;
-}
-
-vec3 bg(vec3 rd) {
-    vec3 col = vec3(0.0);
-    float t = uTime * 0.2;
-
-    float y = clamp(smoothstep(0.3, 1.0, rd.y * 0.5 + 0.5), 0.1, 1.0);
-    col += y * vec3(0.05, 0.18, 0.38) * 6.0;
-
-    float a = atan(rd.x, rd.z);
-    float flares = 0.7 * sin(a * 20. + t) * sin(a * 2. - t) * sin(a * 6.);
-    flares *= smoothstep(.0, 1.0, y);
-    col += flares;
-    col = max(col, 0.);
-    return col;
+  float d1 = smin(g1, cc1, 0.2);
+  d1 = min(d1, cc1);
+  beamAccum += 0.01 / (0.08 + cc1);
+  return d1;
 }
 
 void main() {
+  vec2 baseUv = gl_FragCoord.xy / uResolution.xy;
 
-    vec2 uv = (gl_FragCoord.xy - .5 * uResolution.xy) / uResolution.y;
+  // Always sample artwork at its true UV — never alter the artwork's scale
+  vec4 artwork = artex_sampleMain(baseUv);
 
-    float t = uTime * 0.01;
-    uv += sin(uv * 20. + t) * .01;
+  float strength = clamp(uEffectStrength, 0.0, 1.0);
+  if (strength < 0.001) {
+    gl_FragColor = artwork;
+    return;
+  }
 
-    vec3 col = vec3(0.0);
+  // Compute tunnel geometry for overlay effect
+  vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy) / uResolution.y;
+  float t = uTime * 0.01;
+  uv += sin(uv * 20.0 + t) * 0.01;
 
-    vec3 ro = vec3(0.0, 0.0, -CAMDIST);
-    ro += vec3(sin(sin(ro.x) + cos(ro.y + uTime) + uTime * 0.17851), cos(cos(ro.z) + sin(ro.x + uTime) + uTime * 0.7851), sin(sin(ro.y) + cos(ro.z + uTime) + uTime * 0.35454)) * 0.1;
-    vec3 ta = vec3(0.0);
-    ta += vec3(sin(sin(ta.y) + cos(ta.z + uTime) + uTime * 0.53253), cos(cos(ta.x) + sin(ta.y + uTime) + uTime * 0.36521), sin(sin(ta.x) + cos(ta.y + uTime) + uTime * 0.56325)) * 0.1;
+  vec3 ro = vec3(0.0, 0.0, -CAMDIST);
+  ro += vec3(
+    sin(sin(ro.x) + cos(ro.y + uTime) + uTime * 0.178),
+    cos(cos(ro.z) + sin(ro.x + uTime) + uTime * 0.785),
+    sin(sin(ro.y) + cos(ro.z + uTime) + uTime * 0.355)
+  ) * 0.1;
 
-    vec3 ww = normalize(ta - ro);
-    vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
-    vec3 vv = normalize(cross(uu, ww));
+  vec3 ta = vec3(0.0);
+  ta += vec3(
+    sin(sin(ta.y) + cos(ta.z + uTime) + uTime * 0.533),
+    cos(cos(ta.x) + sin(ta.y + uTime) + uTime * 0.365),
+    sin(sin(ta.x) + cos(ta.y + uTime) + uTime * 0.563)
+  ) * 0.1;
 
-    vec3 rd = normalize(uv.x * uu + uv.y * vv + ww * fov);
+  vec3 ww = normalize(ta - ro);
+  vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+  vec3 vv = normalize(cross(uu, ww));
+  vec3 rd = normalize(uv.x * uu + uv.y * vv + ww);
 
-    float d = rayMarch(ro, rd);
+  // Reduced from 150 to 48 steps
+  float dO = 0.00001;
+  for (int i = 0; i < 48; i++) {
+    vec3 p = ro + rd * dO;
+    float dS = getDist(p);
+    dO += dS;
+    if (dO > 20.0 || dS < 0.00001) break;
+  }
 
-    float mindist = 5.0;
-    col = mix(col, bg(rd), smoothstep(0.0, RAYMARCH_MAX_DIST, d));
+  float depthNorm = clamp(dO / 20.0, 0.0, 1.0);
 
-    col += trianglesBeams * colorB * (0.2 + uAudioLevel * 2.0);
+  // Tunnel beam glow — boosted for visibility
+  vec3 tunnelColor = vec3(0.1, 0.72, 1.0);
+  float beamGlow = beamAccum * (0.4 + uAudioLevel * 3.0);
+  vec3 glowEffect = tunnelColor * beamGlow * 0.6;
+  glowEffect = 1.0 - exp(-glowEffect);
 
-    col = 1.0 - exp(-col * 1.0);
-    col = pow(col, vec3(1.2));
+  // Depth-based ambient: closer = brighter structure
+  float depthAmbient = 1.0 - depthNorm * 0.5;
 
-    vec4 finalColor = vec4(col, smoothstep(mindist, RAYMARCH_MAX_DIST * 0.5, d));
+  // Standalone tunnel visual (visible when no media is loaded)
+  float mediaPresence = smoothstep(0.0, 0.05, artwork.a);
+  vec3 standalone = vec3(0.05, 0.08, 0.15) * depthAmbient;
+  standalone += tunnelColor * (1.0 - depthNorm) * 0.15;
+  vec3 standaloneGlow = glowEffect + glowEffect * tunnelColor * 0.8;
+  standalone += standaloneGlow * strength;
 
-    gl_FragColor = finalColor;
+  // Composite: overlay tunnel structure onto artwork
+  vec3 withMedia = artwork.rgb;
+  withMedia *= mix(vec3(1.0), vec3(0.75), depthNorm * strength * 0.4);
+  vec3 tintedGlow = mix(glowEffect, artwork.rgb * glowEffect * 2.5, 0.4);
+  withMedia += tintedGlow * strength * 1.5;
 
+  vec3 col = mix(standalone, withMedia, mediaPresence);
+
+  gl_FragColor = vec4(col, max(artwork.a, strength * (1.0 - mediaPresence)));
 }
