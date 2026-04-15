@@ -11,14 +11,14 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@artex/contract": "workspace:*",
     "express": "^5.0.0",
     "ws": "^8.18.0",
     "cors": "^2.8.5",
     "helmet": "^8.0.0",
     "express-rate-limit": "^7.5.0",
     "uuid": "^11.0.0",
-    "zod": "^3.24.0"
+    "zod": "^3.24.0",
+    "@artex/contract": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

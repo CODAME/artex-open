@@ -270,6 +270,9 @@ The current implementation includes:
 ├── docs/
 │   ├── API_DESIGN.md           ← This document
 │   └── openapi.yaml            ← OpenAPI 3.1 specification
+├── examples/
+│   ├── run-new-project.ts      ← Sample: create and run a new project (Use Case 1)
+│   └── update-running-experience.ts  ← Sample: live-tune a running experience (Use Case 2)
 ├── src/
 │   ├── server.ts               ← Express + WS server entry point
 │   ├── routes/
@@ -278,16 +281,26 @@ The current implementation includes:
 │   │   └── projects.ts         ← Request handlers for both use cases
 │   ├── middleware/
 │   │   ├── auth.ts             ← Authentication (API key → Firebase → OAuth2)
-│   │   └── validate.ts         ← Contract validation middleware
+│   │   ├── firebaseAuth.ts     ← Firebase Auth validator (hooks into existing ARTEX login)
+│   │   └── validate.ts         ← Contract validation + RFC 7396 merge patch
 │   ├── store/
 │   │   └── projectStore.ts     ← Storage interface + in-memory implementation
 │   ├── ws/
 │   │   ├── broadcaster.ts      ← Per-project WS subscriber management
 │   │   └── handler.ts          ← WS connection handler + client message processing
-│   └── types/
-│       └── api.ts              ← API-layer types, WS protocol, Option C reserved types
+│   ├── types/
+│   │   └── api.ts              ← API-layer types, WS protocol, Option C reserved types
+│   └── __tests__/
+│       ├── helpers.ts           ← Test utilities (buildTestConfig, etc.)
+│       ├── auth.test.ts         ← Auth validator tests (dev + Firebase + combined)
+│       ├── broadcaster.test.ts  ← WS broadcaster unit tests
+│       ├── integration.test.ts  ← End-to-end tests for both use cases
+│       ├── store.test.ts        ← In-memory store CRUD tests
+│       ├── validate.test.ts     ← RFC 7396 merge patch tests
+│       └── ws-handler.test.ts   ← WebSocket URL parsing + token extraction
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json
+└── vitest.config.ts
 ```
 
 ---
@@ -337,3 +350,55 @@ curl -X POST http://localhost:8080/v1/projects/{projectId}/state/events \
 # Connect via WebSocket (use wscat or similar)
 wscat -c "ws://localhost:8080/v1/ws/projects/{projectId}/state?token=dev-token-12345678"
 ```
+
+---
+
+## 10. Sample Applications
+
+Two TypeScript sample scripts demonstrate the primary use cases end-to-end.
+
+### Run a New Project (`examples/run-new-project.ts`)
+
+Creates a full living artwork (Coral Drift — Generative Seascape) with multi-phase
+evolution, interaction events, audio reactivity, and context behavior. Deploys it
+to a target ARTEX instance.
+
+```bash
+# Start the API server
+npm run dev
+
+# In another terminal:
+npx tsx examples/run-new-project.ts
+npx tsx examples/run-new-project.ts --instance gallery-1
+```
+
+### Update a Running Experience (`examples/update-running-experience.ts`)
+
+Takes a running project ID and demonstrates live-tuning: patches config (mood,
+speed, template), adjusts state parameters, pushes interaction events, and
+connects to the WebSocket for real-time broadcast confirmation.
+
+```bash
+npx tsx examples/update-running-experience.ts <projectId>
+```
+
+---
+
+## 11. Tests
+
+74 tests across 6 suites covering unit and integration levels.
+
+```bash
+npm test           # Run all tests
+npx vitest run     # Same, explicit
+npx vitest watch   # Watch mode during development
+```
+
+| Suite | Tests | Covers |
+|-------|-------|--------|
+| `auth.test.ts` | 8 | Dev validator, Firebase JWT, combined validator chain |
+| `broadcaster.test.ts` | 10 | Subscribe/unsubscribe, broadcast, disconnect, per-project isolation |
+| `store.test.ts` | 12 | CRUD, pagination, status filtering, state updates |
+| `validate.test.ts` | 9 | RFC 7396 merge patch (deep merge, null removal, array replace) |
+| `ws-handler.test.ts` | 7 | URL parsing, token extraction from header + query |
+| `integration.test.ts` | 28 | Full Use Case 1 + 2 flows, lifecycle, error cases |
