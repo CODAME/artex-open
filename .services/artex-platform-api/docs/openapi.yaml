@@ -1,0 +1,841 @@
+openapi: 3.1.0
+info:
+  title: ARTEX Platform API
+  version: 1.0.0
+  description: |
+    Public API for managing ARTEX living art projects.
+
+    Provides full CRUD operations on projects (ConfigJson, StateJson, ProjectPackageData),
+    real-time state subscriptions via WebSocket, and asset management.
+
+    ## Authentication
+
+    All endpoints require a Bearer token in the `Authorization` header.
+
+    Phase 1 uses API keys (server-to-server). Phase 2 adds Firebase Auth JWT tokens
+    for user-context operations. Phase 3 introduces OAuth2 for full third-party flows.
+
+    ## Rate Limiting
+
+    Default: 100 requests/minute per API key. WebSocket connections: 5 concurrent per key.
+    State push via WebSocket: 30 frames/second max.
+
+    ## Real-Time Updates
+
+    Connect to `wss://{host}/v1/ws/projects/{projectId}/state` for live state streaming.
+    See the WebSocket Protocol section for frame format.
+
+    ## Future: Extension Gateway (Option C)
+
+    A future `/v1/extensions/*` namespace is reserved for remote extension registration
+    (shaders, media inputs). This will allow external apps to push live signals
+    into running experiences without being bundled in the same runtime.
+
+  contact:
+    name: CODAME
+    url: https://codame.com
+  license:
+    name: Proprietary
+    identifier: LicenseRef-CODAME
+
+servers:
+  - url: https://api.artex.live/v1
+    description: Production
+  - url: https://api-staging.artex.live/v1
+    description: Staging
+  - url: http://localhost:8080/v1
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Projects
+    description: CRUD operations on ARTEX projects
+  - name: Config
+    description: Project configuration (ConfigJson)
+  - name: State
+    description: Runtime state (StateJson)
+  - name: Package
+    description: Project package data (shaders, AI, experimental)
+  - name: Assets
+    description: Project binary assets (images, masks, depth maps)
+  - name: Lifecycle
+    description: Project lifecycle operations (run, stop, reset)
+  - name: Health
+    description: Service health and status
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      summary: Service health check
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  version:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [Projects]
+      summary: List all projects accessible to the caller
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          description: Filter by project lifecycle status
+          schema:
+            type: string
+            enum: [draft, running, stopped, archived]
+      responses:
+        "200":
+          description: Paginated project list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectSummary"
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+    post:
+      operationId: createProject
+      tags: [Projects]
+      summary: Create a new project
+      description: |
+        Creates a new ARTEX project with the provided configuration.
+        A default StateJson is generated from the config using `createStateFromConfig()`.
+        The project starts in `draft` status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "422":
+          $ref: "#/components/responses/ContractError"
+
+  /projects/{projectId}:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    get:
+      operationId: getProject
+      tags: [Projects]
+      summary: Get full project details
+      description: Returns config, state, package data, and metadata.
+      responses:
+        "200":
+          description: Full project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteProject
+      tags: [Projects]
+      summary: Delete a project
+      description: Permanently deletes the project and all associated assets.
+      responses:
+        "204":
+          description: Project deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/config:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    get:
+      operationId: getProjectConfig
+      tags: [Config]
+      summary: Get project configuration
+      responses:
+        "200":
+          description: Current ConfigJson
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigJson"
+
+    put:
+      operationId: replaceProjectConfig
+      tags: [Config]
+      summary: Replace entire project configuration
+      description: |
+        Replaces the full ConfigJson. Validated against `validateConfigJson()`.
+        If the project is running, the new config is applied immediately and
+        a `config_updated` event is broadcast to all WebSocket subscribers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigJson"
+      responses:
+        "200":
+          description: Config replaced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigJson"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "422":
+          $ref: "#/components/responses/ContractError"
+
+    patch:
+      operationId: patchProjectConfig
+      tags: [Config]
+      summary: Partially update project configuration
+      description: |
+        Applies a JSON Merge Patch (RFC 7396) to the ConfigJson.
+        Only the provided fields are updated; everything else is preserved.
+        Validated after merge. Broadcasts `config_updated` if project is running.
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              description: Partial ConfigJson fields to merge
+      responses:
+        "200":
+          description: Config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigJson"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /projects/{projectId}/state:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    get:
+      operationId: getProjectState
+      tags: [State]
+      summary: Get current runtime state
+      responses:
+        "200":
+          description: Current StateJson
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateJson"
+
+    put:
+      operationId: replaceProjectState
+      tags: [State]
+      summary: Replace runtime state
+      description: |
+        Replaces the full StateJson. Use for resetting or jumping to a specific state.
+        Broadcasts `state_replaced` to WebSocket subscribers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StateJson"
+      responses:
+        "200":
+          description: State replaced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateJson"
+
+    patch:
+      operationId: patchProjectState
+      tags: [State]
+      summary: Partially update runtime state
+      description: |
+        Applies a JSON Merge Patch to StateJson. Useful for updating parameters
+        or appending events without replacing the entire state.
+        Broadcasts `state_updated` to WebSocket subscribers.
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: State updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateJson"
+
+  /projects/{projectId}/state/events:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    post:
+      operationId: pushStateEvent
+      tags: [State]
+      summary: Append an event to the state event log
+      description: |
+        Pushes one or more events into `StateJson.eventsLog`.
+        Broadcasts `state_event` to WebSocket subscribers.
+        This is the primary mechanism for external apps to trigger
+        interactions on a running experience.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  items:
+                    type: object
+                    required: [event]
+                    properties:
+                      t:
+                        type: number
+                        description: Timestamp offset in seconds. Server-assigned if omitted.
+                      event:
+                        type: string
+                        description: Event identifier (e.g., "viewer_close", "sound_peak")
+                  maxItems: 50
+      responses:
+        "200":
+          description: Events appended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appended:
+                    type: integer
+                  eventsLog:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        t:
+                          type: number
+                        event:
+                          type: string
+
+  /projects/{projectId}/package:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    get:
+      operationId: getProjectPackage
+      tags: [Package]
+      summary: Get project package data
+      description: Returns shader state, AI data, and experimental features.
+      responses:
+        "200":
+          description: ProjectPackageData
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectPackageData"
+        "404":
+          description: No package data set for this project
+
+    put:
+      operationId: replaceProjectPackage
+      tags: [Package]
+      summary: Replace project package data
+      description: |
+        Replaces the full ProjectPackageData. Normalized via
+        `normalizeProjectPackageData()` before storage.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectPackageData"
+      responses:
+        "200":
+          description: Package data replaced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectPackageData"
+
+    patch:
+      operationId: patchProjectPackage
+      tags: [Package]
+      summary: Partially update package data
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Package data updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectPackageData"
+
+  /projects/{projectId}/assets:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    get:
+      operationId: listProjectAssets
+      tags: [Assets]
+      summary: List project assets
+      responses:
+        "200":
+          description: Asset manifest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetManifest"
+
+  /projects/{projectId}/assets/{assetPath}:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+      - name: assetPath
+        in: path
+        required: true
+        description: Asset path within the project (e.g., "art/base.png", "masks/eyes.png")
+        schema:
+          type: string
+
+    get:
+      operationId: getProjectAsset
+      tags: [Assets]
+      summary: Download a project asset
+      responses:
+        "200":
+          description: Asset binary
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      operationId: uploadProjectAsset
+      tags: [Assets]
+      summary: Upload or replace a project asset
+      requestBody:
+        required: true
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Asset uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  path:
+                    type: string
+                  size:
+                    type: integer
+                  contentType:
+                    type: string
+
+    delete:
+      operationId: deleteProjectAsset
+      tags: [Assets]
+      summary: Delete a project asset
+      responses:
+        "204":
+          description: Asset deleted
+
+  /projects/{projectId}/bundle:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    get:
+      operationId: exportProjectBundle
+      tags: [Projects]
+      summary: Export project as .codame package
+      description: |
+        Downloads the entire project as a .codame ZIP archive
+        containing config.json, state.json, project.json, and all assets.
+        Compatible with `readCodamePackageArchive()`.
+      responses:
+        "200":
+          description: Project bundle
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+
+    post:
+      operationId: importProjectBundle
+      tags: [Projects]
+      summary: Import a .codame package as a new project
+      description: |
+        Uploads a .codame ZIP archive and creates a new project from it.
+        Parsed via `readCodamePackageArchive()` with full validation.
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Project created from bundle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{projectId}/run:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    post:
+      operationId: runProject
+      tags: [Lifecycle]
+      summary: Start or resume a project
+      description: |
+        Transitions the project to `running` status. If already running, this is a no-op.
+        Initializes state from config if no state exists.
+        Opens the project for real-time WebSocket subscriptions.
+      responses:
+        "200":
+          description: Project is now running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projectId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [running]
+                  wsUrl:
+                    type: string
+                    description: WebSocket URL for real-time state subscription
+
+  /projects/{projectId}/stop:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    post:
+      operationId: stopProject
+      tags: [Lifecycle]
+      summary: Stop a running project
+      description: |
+        Transitions to `stopped`. Disconnects all WebSocket subscribers
+        with a `project_stopped` close frame.
+        State is preserved and can be resumed with `/run`.
+      responses:
+        "200":
+          description: Project stopped
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projectId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [stopped]
+
+  /projects/{projectId}/reset:
+    parameters:
+      - $ref: "#/components/parameters/projectId"
+
+    post:
+      operationId: resetProject
+      tags: [Lifecycle]
+      summary: Reset project state to initial
+      description: |
+        Regenerates StateJson from the current ConfigJson using
+        `createStateFromConfig()`. Broadcasts `state_replaced` if running.
+      responses:
+        "200":
+          description: State reset to initial
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateJson"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Phase 1: API key as Bearer token.
+        Phase 2: Firebase Auth JWT.
+        Phase 3: OAuth2 access token.
+
+  parameters:
+    projectId:
+      name: projectId
+      in: path
+      required: true
+      description: Unique project identifier
+      schema:
+        type: string
+
+  responses:
+    ValidationError:
+      description: Request body failed validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    ContractError:
+      description: Data violates ARTEX contract rules
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error context
+
+    ProjectSummary:
+      type: object
+      required: [projectId, title, status, createdAt, updatedAt]
+      properties:
+        projectId:
+          type: string
+        title:
+          type: string
+        artistName:
+          type: string
+        status:
+          type: string
+          enum: [draft, running, stopped, archived]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        activeSubscribers:
+          type: integer
+          description: Number of active WebSocket connections
+
+    Project:
+      type: object
+      required: [projectId, status, config, state, createdAt, updatedAt]
+      properties:
+        projectId:
+          type: string
+        status:
+          type: string
+          enum: [draft, running, stopped, archived]
+        config:
+          $ref: "#/components/schemas/ConfigJson"
+        state:
+          $ref: "#/components/schemas/StateJson"
+        packageData:
+          $ref: "#/components/schemas/ProjectPackageData"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateProjectRequest:
+      type: object
+      required: [config]
+      properties:
+        config:
+          $ref: "#/components/schemas/ConfigJson"
+        packageData:
+          $ref: "#/components/schemas/ProjectPackageData"
+
+    ConfigJson:
+      type: object
+      description: Full ARTEX artwork configuration. See @artex/contract ConfigJson.
+      required: [version, title, story, layers, animation, evolution, interaction, constraints]
+      properties:
+        version:
+          type: integer
+        title:
+          type: string
+        artistName:
+          type: string
+        story:
+          type: string
+        # ... remaining fields match @artex/contract ConfigJson exactly
+        # Full schema generated from TypeScript types at build time
+
+    StateJson:
+      type: object
+      description: Runtime state. See @artex/contract StateJson.
+      required: [installTimestamp, randomSeed, timeOffsetSeconds, currentPhaseLabel, parameters, eventsLog]
+      properties:
+        artworkId:
+          type: string
+        installTimestamp:
+          type: string
+          format: date-time
+        randomSeed:
+          type: integer
+        timeOffsetSeconds:
+          type: number
+        currentPhaseLabel:
+          type: string
+        parameters:
+          type: object
+          properties:
+            breathingIntensity:
+              type: number
+            colorTemperature:
+              type: number
+            parallaxShift:
+              type: number
+            noiseIntensity:
+              type: number
+        eventsLog:
+          type: array
+          items:
+            type: object
+            properties:
+              t:
+                type: number
+              event:
+                type: string
+
+    ProjectPackageData:
+      type: object
+      description: Extended project data. See @artex/contract ProjectPackageData.
+      required: [version, shader, shaderChannels]
+      properties:
+        version:
+          type: integer
+        shader:
+          type: object
+          description: ProjectShaderState
+        shaderChannels:
+          type: object
+          properties:
+            paths:
+              type: array
+              items:
+                type: string
+                nullable: true
+            sources:
+              type: array
+              items:
+                type: string
+                enum: [none, file, camera]
+        runtime:
+          type: object
+        ai:
+          type: object
+        experimental:
+          type: object
+
+    AssetManifest:
+      type: object
+      properties:
+        baseImagePath:
+          type: string
+        statePaths:
+          type: array
+          items:
+            type: string
+        maskPaths:
+          type: object
+          additionalProperties:
+            type: string
+        depthPath:
+          type: string
+          nullable: true
+        shaderChannelPaths:
+          type: array
+          items:
+            type: string
+            nullable: true
