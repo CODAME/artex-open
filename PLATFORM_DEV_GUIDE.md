@@ -16,6 +16,8 @@
 4. [Package Map & Boundaries](#4-package-map--boundaries)
 5. [What You Can Build](#5-what-you-can-build)
 6. [Shader Contributions](#6-shader-contributions)
+6b. [P5.js Sketch Contributions](#6b-p5js-sketch-contributions)
+6c. [HTML Experience Contributions](#6c-html-experience-contributions)
 7. [Extension API Contributions](#7-extension-api-contributions)
 8. [Experiment / Sandbox Tracks](#8-experiment--sandbox-tracks)
 9. [Contract Changes](#9-contract-changes)
@@ -29,15 +31,29 @@
 
 ## 1. Architecture Overview
 
-ARTEX is organized across five capability layers. Each layer has a clear
+ARTEX is organized across capability layers. Each layer has a clear
 access level and dependency direction — dependencies always flow downward;
 a lower layer never imports from a higher one.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
+│  🌐  PLATFORM API  (Open — extends .services/artex-platform-api)│
+│  REST + WebSocket API for external integrations                 │
+│  Project CRUD · Live config/state updates · Event push          │
+│  Auth: dev tokens → Firebase JWT → OAuth2                       │
+└───────────────────────┬─────────────────────────────────────────┘
+                        │ deployed alongside
+┌───────────────────────▼─────────────────────────────────────────┐
 │  🔒  CORE PLATFORM  (Private — CODAME only)                     │
 │  apps/creator · packages/artex-core · .services/               │
 │  Rendering engine · Pipeline · Auth/Tracking · Revenue APIs     │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  🖼️  RENDER CORE  (packages/artex-render-core)            │   │
+│  │  Renderer adapters for each engine:                       │   │
+│  │  Shader (WebGL) · 3D Scene · P5.js · HTML Canvas          │   │
+│  │  Signal bridge (24 signals) · Sandboxed iframes           │   │
+│  └──────────────────────────────────────────────────────────┘   │
 └───────────────────────┬─────────────────────────────────────────┘
                         │ consumes via package exports only
 ┌───────────────────────▼─────────────────────────────────────────┐
@@ -51,6 +67,8 @@ a lower layer never imports from a higher one.
 │  📜  CONTRACT LAYER  (Open — Apache 2.0)                         │
 │  packages/artex-contract                                         │
 │  ConfigJson · StateJson · ProjectPackageData                     │
+│  RendererMode: webgl | p5js | html | hybrid-reactive-field      │
+│  P5jsSketchConfig · HtmlExperienceConfig                         │
 │  Package read/write · AI policy types                           │
 └─────────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────────────┐
@@ -65,16 +83,34 @@ a lower layer never imports from a higher one.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Rendering Engines
+
+ARTEX supports four rendering engines, each with its own renderer adapter
+and creative workflow in the Studio:
+
+| Engine | `rendererMode` | Config field | Creative layer |
+|--------|---------------|--------------|----------------|
+| Shader | `webgl` | `layers.base`, shaders | GLSL shaders with ARTEX uniforms |
+| 3D Scene | `hybrid-reactive-field` | scene config | Three.js reactive scenes |
+| P5.js | `p5js` | `p5js: P5jsSketchConfig` | P5.js instance-mode sketches |
+| HTML Canvas | `html` | `html: HtmlExperienceConfig` | Full HTML+JS experiences |
+
+P5.js and HTML experiences run in sandboxed iframes and receive live signals
+(audio, proximity, gestures, pose) via the ARTEX signal bridge — a `postMessage`
+protocol that injects an `artex` global object with 24 signal properties per frame.
+
 ### Dependency Rule
 
 ```
-artex-shaders     → (no deps)
-artex-experiments → artex-contract
-artex-extensions  → artex-contract
-artex-contract    → (no deps)
+artex-shaders        → (no deps)
+artex-experiments    → artex-contract
+artex-extensions     → artex-contract
+artex-contract       → (no deps)
+artex-render-core    → artex-contract, artex-extensions
+artex-platform-api   → artex-contract
 
-apps/creator      → all packages (through exports only)
-artex-core        → artex-contract
+apps/creator         → all packages (through exports only)
+artex-core           → artex-contract
 ```
 
 Run `npm run check:boundaries` at any time to verify this rule holds.
@@ -92,8 +128,9 @@ Run `npm run check:boundaries` at any time to verify this rule holds.
 
 ```
 artex/                          ← private monorepo
-├── apps/creator/               ← product app (WebGL engine, all UI)
+├── apps/creator/               ← product app (all UI, engine orchestration)
 ├── packages/artex-core/        ← internal platform types
+├── packages/artex-render-core/ ← renderer adapters (Shader, 3D, P5.js, HTML)
 ├── .services/artex-platform-api/  ← Cloud Run API
 ├── firestore.rules             ← security rules
 ├── .env.*                      ← secrets / credentials
@@ -187,7 +224,9 @@ npm run build
 | `artex-shaders` | `@artex/shaders` | Creative | `@artex/extensions` |
 | `artex-extensions` | `@artex/extensions` | Extension | `@artex/contract` |
 | `artex-experiments` | `@artex/experiments` | Experiment | `@artex/contract`, `@artex/extensions` |
+| `artex-render-core` | `@artex/render-core` | Render (private) | `@artex/contract`, `@artex/extensions` |
 | `artex-core` | `@artex/core` | Core (private) | `@artex/contract` |
+| `artex-platform-api` | `@artex/platform-api` | Platform | `@artex/contract` |
 | `apps/creator` | `@artex/creator` | App (private) | all packages |
 
 ### Hard rules
@@ -210,12 +249,43 @@ npm run build
 - Requires: understanding of ARTEX uniform conventions (see §6)
 - No platform access needed
 
+### As a P5.js sketch contributor
+
+- A P5.js instance-mode sketch that runs inside the ARTEX sandbox
+- Access 24 live signals (audio, proximity, gestures, pose) via the `artex` global object
+- Sketches run in a sandboxed iframe with P5.js v1.11.3 from CDN
+- Optional WebGL mode toggle and additional libraries (e.g. `p5.sound`)
+- Import existing global-mode sketches — ARTEX auto-converts to instance mode
+- See §6b for the signal bridge reference and starter template
+- No platform access needed
+
+### As an HTML experience creator
+
+- A full HTML+JS canvas experience that runs inside the ARTEX sandbox
+- Same 24-signal bridge as P5.js — the `artex` global is injected automatically
+- MediaPipe compatibility shim: if your HTML uses MediaPipe (Pose, Hands, Holistic),
+  ARTEX auto-detects and bridges its own signal data into those APIs
+- Upload a standalone `.html` file or write directly in the Studio editor
+- See §6c for the signal bridge reference
+- No platform access needed
+
 ### As an extension contributor
 
 - A new media input adapter implementing `MediaInputAdapter`
   (e.g. OSC signal input, MIDI, Bluetooth sensor, custom camera pipeline)
 - A new sandbox module in `artex-experiments`
 - Requires: TypeScript familiarity + understanding of the extension host API
+
+### As an external integration developer
+
+- An application that creates and manages ARTEX projects via the Platform API
+- A live controller that tunes running experiences in real-time (mood, animation, state)
+- A sensor bridge that pushes interaction events (proximity, sound, custom triggers) into running artworks
+- A dashboard or monitoring tool that subscribes to project state via WebSocket
+- Requires: HTTP client + optional WebSocket client. No platform access needed.
+- See `.services/artex-platform-api/README.md` for the full API reference, quick start, and sample apps
+- Two working examples in `.services/artex-platform-api/examples/`:
+  `run-new-project.ts` (Use Case 1) and `update-running-experience.ts` (Use Case 2)
 
 ### As a core-layer platform builder (invite-only)
 
@@ -262,6 +332,114 @@ to their `= 0` default when the input is inactive.
 Capabilities are auto-inferred from which uniforms your shader declares.
 Audio badge appears when `uAudioLevel` or `uBassLevel` is present.
 Camera badge appears when `uCameraLevel` is present. etc.
+
+---
+
+## 6b. P5.js Sketch Contributions
+
+> See **[docs/proposals/p5js-support.md](./docs/proposals/p5js-support.md)** in
+> the private repo for the full design. This section is a quick orientation.
+
+### Flow
+
+```
+Write P5.js sketch (instance mode) → Test locally →
+Import into Studio or paste in P5.js panel → Run check:boundaries + build → Open PR
+```
+
+### Instance mode requirement
+
+ARTEX runs P5.js sketches in **instance mode**, not global mode. This means
+your sketch receives a `p` argument and all P5.js calls go through it:
+
+```javascript
+// ✅ Instance mode (what ARTEX expects)
+export default function sketch(p) {
+  p.setup = function () {
+    p.createCanvas(p.windowWidth, p.windowHeight);
+  };
+  p.draw = function () {
+    p.background(0);
+    p.ellipse(p.width / 2, p.height / 2, 50);
+  };
+}
+```
+
+If you have an existing global-mode sketch (`function setup() { ... }`), the
+ARTEX import workflow auto-converts it to instance mode.
+
+### ARTEX signal bridge
+
+Inside a P5.js sketch, the `artex` global provides 24 live signals per frame:
+
+| Signal | Type | Description |
+|--------|------|-------------|
+| `artex.time` | `number` | Playback time (seconds) |
+| `artex.proximity` | `number` 0..1 | Viewer proximity |
+| `artex.soundLevel` | `number` 0..1 | Overall audio amplitude |
+| `artex.soundPeak` | `number` 0..1 | Peak detection |
+| `artex.gesture` | `string` | Current detected gesture name |
+| `artex.pose` | `object` | Full body pose landmarks |
+| `artex.handPose` | `object` | Hand pose landmarks |
+| `artex.pinch` | `number` 0..1 | Pinch gesture intensity |
+| `artex.openPalm` | `number` 0..1 | Open palm detection |
+| `artex.fist` | `number` 0..1 | Fist detection |
+| `artex.pointX` | `number` | Pointing direction X |
+| `artex.pointY` | `number` | Pointing direction Y |
+| `artex.movement` | `number` 0..1 | Overall body movement |
+| `artex.stillness` | `number` 0..1 | Stillness detection |
+| `artex.width` | `number` | Canvas width (pixels) |
+| `artex.height` | `number` | Canvas height (pixels) |
+
+All signals degrade gracefully to `0` (or empty) when the corresponding
+input is inactive — no null checks needed.
+
+### Config type
+
+```typescript
+interface P5jsSketchConfig {
+  sketchSource: string;    // P5.js sketch code (instance-mode)
+  webglMode?: boolean;     // WEBGL vs 2D canvas (default: 2D)
+  libraries?: string[];    // Optional extra libs (e.g. "p5.sound")
+}
+```
+
+Set `rendererMode: "p5js"` and provide the `p5js` field in your `ConfigJson`.
+
+---
+
+## 6c. HTML Experience Contributions
+
+### Flow
+
+```
+Write HTML + JS → Test in browser →
+Upload .html file or paste in HTML panel in Studio → Open PR
+```
+
+### How it works
+
+HTML experiences run in a sandboxed `<iframe>` with `allow-scripts`. ARTEX
+automatically injects the signal bridge script before your HTML loads, making
+the `artex` global available with the same 24 signals as P5.js (see §6b table).
+
+### MediaPipe compatibility
+
+If your HTML uses MediaPipe APIs (`new Pose()`, `new Hands()`, `new Camera()`,
+`navigator.mediaDevices.getUserMedia()`), ARTEX auto-detects this and injects
+a compatibility shim that bridges ARTEX's own signal data into those APIs.
+You don't need to change your existing MediaPipe code — it works as-is with
+ARTEX signals replacing the camera feed.
+
+### Config type
+
+```typescript
+interface HtmlExperienceConfig {
+  htmlSource: string;      // Full HTML source including scripts
+}
+```
+
+Set `rendererMode: "html"` and provide the `html` field in your `ConfigJson`.
 
 ---
 
@@ -408,7 +586,8 @@ export const myExperiment: ExperimentModule = {
 ## 9. Contract Changes
 
 Changes to `packages/artex-contract` affect **every package and every future
-runtime implementation**. Treat the contract as a public API.
+runtime implementation**, including the Platform API (`.services/artex-platform-api`),
+which validates all input against contract types. Treat the contract as a public API.
 
 ### Compatibility rules (from ARCHITECTURE.md)
 
@@ -417,6 +596,10 @@ runtime implementation**. Treat the contract as a public API.
 3. Unknown extra fields are preserved when packages are read
 4. Missing optional assets generate warnings
 5. Missing required assets fail clearly
+
+Recent contract additions include `RendererMode` (`webgl | p5js | html |
+hybrid-reactive-field`), `P5jsSketchConfig`, and `HtmlExperienceConfig` —
+all consumed by both the render-core adapters and the Platform API.
 
 ### Before changing `ConfigJson` or `StateJson`
 
@@ -626,6 +809,30 @@ The open packages (`artex-contract`, `artex-shaders`, `artex-extensions`,
 `npm run build` work out of the box with no credentials. The creator studio,
 which does use Firebase, is part of the private monorepo and is not available
 in `artex-open`.
+
+**Q: Can I use my existing P5.js sketch in ARTEX?**
+Yes. ARTEX supports P5.js as a first-class rendering engine. If your sketch
+uses global mode (`function setup() { ... }`), the import workflow auto-converts
+it to instance mode. Your sketch also gets access to 24 live signals (audio,
+proximity, gestures, pose) via the `artex` global. See §6b.
+
+**Q: Can I use my existing HTML/Canvas project in ARTEX?**
+Yes. Upload a standalone `.html` file or paste it in the HTML panel in Studio.
+ARTEX runs it in a sandboxed iframe and injects the signal bridge automatically.
+If your HTML uses MediaPipe APIs, ARTEX auto-detects and provides a compatibility
+shim so your code works without changes. See §6c.
+
+**Q: What rendering engines does ARTEX support?**
+Four: Shader (`webgl`) for GLSL, 3D Scene (`hybrid-reactive-field`) for Three.js,
+P5.js (`p5js`) for creative coding sketches, and HTML Canvas (`html`) for
+standalone HTML+JS experiences. Set `rendererMode` in your `ConfigJson` to
+choose the engine.
+
+**Q: How do I build an external integration with ARTEX?**
+Use the Platform API at `.services/artex-platform-api/`. It provides REST
+endpoints for project management and WebSocket subscriptions for real-time
+state updates — no platform-layer access needed. See the README for a quick
+start and working sample apps in `examples/`.
 
 **Q: What's the difference between artex-extensions and artex-experiments?**
 `artex-extensions` is the **stable, versioned extension API** — code here
