@@ -1,3 +1,4 @@
+/// <reference path="./vite-env.d.ts" />
 import { isBuiltinShaderHiddenFromLibrary } from "./hiddenBuiltinShaders";
 import type { ShaderExtensionDefinition } from "@artex/extensions";
 

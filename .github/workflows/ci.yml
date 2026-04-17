@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build & test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build --workspaces --if-present
+
+      - name: Type check (packages)
+        run: npx tsc --build --noEmit
+        # Covers all packages in the root tsconfig project references
+
+      - name: Type check (platform API)
+        run: npx tsc --noEmit
+        working-directory: .services/artex-platform-api
+
+      - name: Test
+        run: npm test

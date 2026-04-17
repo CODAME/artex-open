@@ -47,6 +47,8 @@ describe("resolveEffectiveAIPolicy", () => {
     localOnly: false,
     allowMetadataSend: true,
     allowImageSend: true,
+    allowSuggestionHistoryStorage: false,
+    connectionStatus: "unknown",
   };
 
   const openPolicy: ProjectAIPolicy = {
@@ -85,6 +87,8 @@ describe("evaluateSuggestionPolicy", () => {
     localOnly: false,
     allowMetadataSend: true,
     allowImageSend: false,
+    allowSuggestionHistoryStorage: false,
+    connectionStatus: "unknown",
   };
 
   const openPolicy: ProjectAIPolicy = DEFAULT_PROJECT_AI_POLICY;

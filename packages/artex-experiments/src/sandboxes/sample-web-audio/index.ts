@@ -41,8 +41,8 @@ export class SampleWebAudioAdapter implements MediaInputAdapter {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
-  private timeDomainBuf: Uint8Array | null = null;
-  private frequencyBuf: Uint8Array | null = null;
+  private timeDomainBuf: Uint8Array<ArrayBuffer> | null = null;
+  private frequencyBuf: Uint8Array<ArrayBuffer> | null = null;
   private rollingRms = 0;
   private callbacks = new Set<(frame: MediaInputFrame) => void>();
 

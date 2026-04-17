@@ -1,0 +1,152 @@
+name: Contract drift watch
+
+# Triggered two ways:
+#   1. Weekly schedule — catches silent drift
+#   2. repository_dispatch from the private ARTEX repo whenever
+#      packages/artex-contract changes (see docs below on wiring this up)
+#
+# Private repo setup — add this job to any workflow that runs on pushes to main:
+#
+#   notify-open:
+#     if: contains(github.event.head_commit.modified, 'packages/artex-contract/')
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Trigger contract-watch in artex-open
+#         uses: peter-evans/repository-dispatch@v3
+#         with:
+#           token: ${{ secrets.ARTEX_OPEN_DISPATCH_TOKEN }}
+#           repository: CODAME/artex-open
+#           event-type: contract-updated
+#           client-payload: |
+#             {
+#               "contract_sha": "${{ github.sha }}",
+#               "contract_ref": "${{ github.ref_name }}"
+#             }
+#
+# ARTEX_OPEN_DISPATCH_TOKEN needs `repo` scope (classic PAT) or
+# fine-grained with Actions write on CODAME/artex-open.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday 09:00 UTC
+  repository_dispatch:
+    types: [contract-updated]
+
+jobs:
+  check:
+    name: Check for contract drift
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build packages
+        id: build
+        run: npm run build --workspaces --if-present
+        continue-on-error: true
+
+      - name: Type check (packages)
+        id: typecheck_packages
+        run: npx tsc --build --noEmit
+        continue-on-error: true
+
+      - name: Type check (platform API)
+        id: typecheck_api
+        run: npx tsc --noEmit
+        working-directory: .services/artex-platform-api
+        continue-on-error: true
+
+      - name: Test
+        id: test
+        run: npm test
+        continue-on-error: true
+
+      - name: Open or update drift issue
+        if: |
+          steps.build.outcome == 'failure' ||
+          steps.typecheck_packages.outcome == 'failure' ||
+          steps.typecheck_api.outcome == 'failure' ||
+          steps.test.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'contract-drift';
+            const title = 'Contract drift: artex-open is broken against current @artex/contract';
+
+            // Ensure label exists
+            try {
+              await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label });
+            } catch {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner, repo: context.repo.repo,
+                name: label, color: 'd93f0b',
+                description: 'artex-open is broken against the private contract package',
+              });
+            }
+
+            // Avoid duplicate open issues
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: label,
+            });
+            if (existing.data.length > 0) {
+              console.log(`Issue already open: ${existing.data[0].html_url}`);
+              return;
+            }
+
+            const trigger = context.eventName === 'repository_dispatch'
+              ? `Triggered by contract update in private repo (ref: \`${{ github.event.client_payload.contract_ref || 'unknown' }}\`, sha: \`${{ github.event.client_payload.contract_sha || 'unknown' }}\`).`
+              : 'Triggered by weekly schedule.';
+
+            const steps = [
+              { name: 'Build',                  outcome: '${{ steps.build.outcome }}' },
+              { name: 'Type check (packages)',  outcome: '${{ steps.typecheck_packages.outcome }}' },
+              { name: 'Type check (platform API)', outcome: '${{ steps.typecheck_api.outcome }}' },
+              { name: 'Test',                   outcome: '${{ steps.test.outcome }}' },
+            ];
+
+            const rows = steps.map(s =>
+              `| ${s.name} | ${s.outcome === 'success' ? '✅' : '❌'} ${s.outcome} |`
+            ).join('\n');
+
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: [label],
+              body: [
+                `${trigger}`,
+                '',
+                '## Failed checks',
+                '',
+                '| Check | Result |',
+                '|-------|--------|',
+                rows,
+                '',
+                `[Full run logs](${runUrl})`,
+                '',
+                '## What to do',
+                '',
+                '1. Pull the latest `packages/artex-contract` from the private ARTEX repo.',
+                '2. Update any artex-open code that breaks against the new contract.',
+                '3. Open a PR and close this issue.',
+              ].join('\n'),
+            });
+
+      - name: Fail if any check failed
+        if: |
+          steps.build.outcome == 'failure' ||
+          steps.typecheck_packages.outcome == 'failure' ||
+          steps.typecheck_api.outcome == 'failure' ||
+          steps.test.outcome == 'failure'
+        run: exit 1
