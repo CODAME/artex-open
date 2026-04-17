@@ -432,14 +432,19 @@ paths:
     get:
       operationId: listProjectAssets
       tags: [Assets]
-      summary: List project assets
+      summary: List uploaded project assets
       responses:
         "200":
-          description: Asset manifest
+          description: Flat list of stored assets
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AssetManifest"
+                type: object
+                properties:
+                  assets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AssetInfo"
 
   /projects/{projectId}/assets/{assetPath}:
     parameters:
@@ -447,7 +452,10 @@ paths:
       - name: assetPath
         in: path
         required: true
-        description: Asset path within the project (e.g., "art/base.png", "masks/eyes.png")
+        description: |
+          Asset path within the project, may contain slashes
+          (e.g. "art/base.png", "3d/totem.stl"). URL-encode slashes as %2F
+          if your HTTP client collapses them.
         schema:
           type: string
 
@@ -455,6 +463,7 @@ paths:
       operationId: getProjectAsset
       tags: [Assets]
       summary: Download a project asset
+      description: Returns the raw bytes with the Content-Type used when uploading.
       responses:
         "200":
           description: Asset binary
@@ -467,6 +476,10 @@ paths:
               schema:
                 type: string
                 format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -474,6 +487,10 @@ paths:
       operationId: uploadProjectAsset
       tags: [Assets]
       summary: Upload or replace a project asset
+      description: |
+        Accepts any binary content type. Use `application/octet-stream` for
+        STL / arbitrary binary files; use `image/png` or `image/jpeg` for
+        images. The content type is preserved and returned on GET.
       requestBody:
         required: true
         content:
@@ -485,20 +502,21 @@ paths:
             schema:
               type: string
               format: binary
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+          model/stl:
+            schema:
+              type: string
+              format: binary
       responses:
         "200":
           description: Asset uploaded
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  path:
-                    type: string
-                  size:
-                    type: integer
-                  contentType:
-                    type: string
+                $ref: "#/components/schemas/AssetInfo"
 
     delete:
       operationId: deleteProjectAsset
@@ -817,6 +835,20 @@ components:
           type: object
         experimental:
           type: object
+
+    AssetInfo:
+      type: object
+      required: [path, size, contentType]
+      properties:
+        path:
+          type: string
+          example: "3d/totem.stl"
+        size:
+          type: integer
+          description: File size in bytes
+        contentType:
+          type: string
+          example: "application/octet-stream"
 
     AssetManifest:
       type: object
