@@ -9,7 +9,8 @@
     "packages/artex-shaders",
     "packages/artex-extensions",
     "packages/artex-experiments",
-    "packages/artex-shader-tools"
+    "packages/artex-shader-tools",
+    ".services/artex-platform-api"
   ],
   "scripts": {
     "check:boundaries": "node scripts/check_workspace_boundaries.mjs",

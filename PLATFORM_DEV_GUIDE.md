@@ -283,6 +283,7 @@ npm run build
 - A sensor bridge that pushes interaction events (proximity, sound, custom triggers) into running artworks
 - A dashboard or monitoring tool that subscribes to project state via WebSocket
 - Requires: HTTP client + optional WebSocket client. No platform access needed.
+- **Important:** Run `npm install` from the repo root (not inside `.services/artex-platform-api/`) so the `@artex/contract` workspace dependency resolves correctly. Then start the API with `npm run dev --workspace=@artex/platform-api`.
 - See `.services/artex-platform-api/README.md` for the full API reference, quick start, and sample apps
 - Two working examples in `.services/artex-platform-api/examples/`:
   `run-new-project.ts` (Use Case 1) and `update-running-experience.ts` (Use Case 2)
@@ -831,8 +832,10 @@ choose the engine.
 **Q: How do I build an external integration with ARTEX?**
 Use the Platform API at `.services/artex-platform-api/`. It provides REST
 endpoints for project management and WebSocket subscriptions for real-time
-state updates — no platform-layer access needed. See the README for a quick
-start and working sample apps in `examples/`.
+state updates — no platform-layer access needed. Run `npm install` from the
+repo root first (the API depends on `@artex/contract` via the workspace graph),
+then `npm run dev --workspace=@artex/platform-api` to start it. See the README
+for a full quick start and working sample apps in `examples/`.
 
 **Q: What's the difference between artex-extensions and artex-experiments?**
 `artex-extensions` is the **stable, versioned extension API** — code here
