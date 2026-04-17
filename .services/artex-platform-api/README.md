@@ -4,11 +4,19 @@ External API for managing ARTEX living art projects. Enables third-party applica
 
 ## Quick Start
 
+This package depends on `@artex/contract` via the workspace graph, so **install from the repo root** first:
+
 ```bash
-cd .services/artex-platform-api
+# From the artex-open root
 npm install
-npm run dev
+
+# Then start the API (either way works)
+npm run dev --workspace=@artex/platform-api
+# — or —
+cd .services/artex-platform-api && npm run dev
 ```
+
+> **Note:** Running `npm install` inside `.services/artex-platform-api/` directly will fail because npm cannot resolve `@artex/contract` outside the workspace context.
 
 The API starts at `http://localhost:8080/v1`. In development mode, any Bearer token of 8+ characters is accepted.
 
