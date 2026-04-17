@@ -9,10 +9,13 @@
  */
 
 import { Router } from "express";
+import express from "express";
 import type { ProjectStore } from "../store/projectStore.js";
 import type { WsBroadcaster } from "../ws/broadcaster.js";
 import { createProjectHandlers } from "../handlers/projects.js";
 import { requireScope } from "../middleware/auth.js";
+
+const rawBody = express.raw({ type: () => true, limit: "50mb" });
 
 export const createV1Router = (
   store: ProjectStore,
@@ -166,6 +169,111 @@ export const createV1Router = (
   router.post("/projects/:projectId/reset",
     requireScope("projects:write"),
     handlers.resetProject,
+  );
+
+  // -------------------------------------------------------------------------
+  // Assets — binary file storage per project
+  //
+  // assetPath may contain slashes (e.g. "art/base.png", "3d/totem.stl").
+  // We extract it from the URL directly to avoid Express wildcard edge cases.
+  // -------------------------------------------------------------------------
+
+  const extractAssetPath = (url: string, projectId: string): string => {
+    const marker = `/projects/${projectId}/assets/`;
+    const idx = url.indexOf(marker);
+    return idx >= 0 ? url.slice(idx + marker.length).split("?")[0] : "";
+  };
+
+  router.get("/projects/:projectId/assets",
+    requireScope("projects:read"),
+    async (req, res) => {
+      const projectId = req.params.projectId as string;
+      const project = await store.get(projectId);
+      if (!project) {
+        res.status(404).json({ code: "project_not_found", message: "Project not found." });
+        return;
+      }
+      const entries = await store.listAssets(projectId);
+      res.json({
+        assets: entries.map(({ path, size, contentType }) => ({ path, size, contentType })),
+      });
+    },
+  );
+
+  router.put("/projects/:projectId/assets/{*assetWildcard}",
+    requireScope("projects:write"),
+    rawBody,
+    async (req, res) => {
+      const projectId = req.params.projectId as string;
+      const assetPath = extractAssetPath(req.url, projectId);
+
+      if (!assetPath) {
+        res.status(400).json({ code: "invalid_asset_path", message: "Asset path must not be empty." });
+        return;
+      }
+
+      const project = await store.get(projectId);
+      if (!project) {
+        res.status(404).json({ code: "project_not_found", message: "Project not found." });
+        return;
+      }
+
+      if (!Buffer.isBuffer(req.body)) {
+        res.status(400).json({ code: "invalid_body", message: "Request body must be raw binary." });
+        return;
+      }
+
+      const contentType = (req.headers["content-type"] ?? "application/octet-stream").split(";")[0].trim();
+      const entry = await store.storeAsset(projectId, assetPath, req.body, contentType);
+      res.json({ path: entry.path, size: entry.size, contentType: entry.contentType });
+    },
+  );
+
+  router.get("/projects/:projectId/assets/{*assetWildcard}",
+    requireScope("projects:read"),
+    async (req, res) => {
+      const projectId = req.params.projectId as string;
+      const assetPath = extractAssetPath(req.url, projectId);
+
+      const project = await store.get(projectId);
+      if (!project) {
+        res.status(404).json({ code: "project_not_found", message: "Project not found." });
+        return;
+      }
+
+      const entry = await store.getAsset(projectId, assetPath);
+      if (!entry) {
+        res.status(404).json({ code: "asset_not_found", message: `Asset '${assetPath}' not found.` });
+        return;
+      }
+
+      res.set("Content-Type", entry.contentType);
+      res.set("Content-Length", String(entry.size));
+      res.send(entry.data);
+    },
+  );
+
+  router.delete("/projects/:projectId/assets/{*assetWildcard}",
+    requireScope("projects:write"),
+    async (req, res) => {
+      const projectId = req.params.projectId as string;
+      const assetPath = extractAssetPath(req.url, projectId);
+
+      const project = await store.get(projectId);
+      if (!project) {
+        res.status(404).json({ code: "project_not_found", message: "Project not found." });
+        return;
+      }
+
+      const existing = await store.getAsset(projectId, assetPath);
+      if (!existing) {
+        res.status(404).json({ code: "asset_not_found", message: `Asset '${assetPath}' not found.` });
+        return;
+      }
+
+      await store.deleteAsset(projectId, assetPath);
+      res.status(204).send();
+    },
   );
 
   return router;

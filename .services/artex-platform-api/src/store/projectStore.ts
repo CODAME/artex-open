@@ -14,6 +14,17 @@ import type { Project, ProjectSummary, ProjectStatus } from "../types/api.js";
 import { v4 as uuid } from "uuid";
 
 // ---------------------------------------------------------------------------
+// Asset types
+// ---------------------------------------------------------------------------
+
+export interface AssetEntry {
+  path: string;
+  data: Buffer;
+  contentType: string;
+  size: number;
+}
+
+// ---------------------------------------------------------------------------
 // Interface
 // ---------------------------------------------------------------------------
 
@@ -45,6 +56,11 @@ export interface ProjectStore {
   setStatus(projectId: string, status: ProjectStatus, instanceId?: string): Promise<Project>;
 
   delete(projectId: string): Promise<void>;
+
+  storeAsset(projectId: string, assetPath: string, data: Buffer, contentType: string): Promise<AssetEntry>;
+  getAsset(projectId: string, assetPath: string): Promise<AssetEntry | null>;
+  listAssets(projectId: string): Promise<AssetEntry[]>;
+  deleteAsset(projectId: string, assetPath: string): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +69,8 @@ export interface ProjectStore {
 
 export const createInMemoryProjectStore = (): ProjectStore => {
   const projects = new Map<string, Project>();
+  // keyed by `${projectId}/${assetPath}`
+  const assets = new Map<string, AssetEntry>();
 
   return {
     async create({ config, state, packageData, instanceId }) {
@@ -148,6 +166,32 @@ export const createInMemoryProjectStore = (): ProjectStore => {
 
     async delete(projectId) {
       projects.delete(projectId);
+      // Clean up associated assets
+      for (const key of assets.keys()) {
+        if (key.startsWith(`${projectId}/`)) assets.delete(key);
+      }
+    },
+
+    async storeAsset(projectId, assetPath, data, contentType) {
+      if (!projects.has(projectId)) throw new Error(`Project ${projectId} not found`);
+      const entry: AssetEntry = { path: assetPath, data, contentType, size: data.length };
+      assets.set(`${projectId}/${assetPath}`, entry);
+      return entry;
+    },
+
+    async getAsset(projectId, assetPath) {
+      return assets.get(`${projectId}/${assetPath}`) ?? null;
+    },
+
+    async listAssets(projectId) {
+      const prefix = `${projectId}/`;
+      return [...assets.entries()]
+        .filter(([k]) => k.startsWith(prefix))
+        .map(([, v]) => v);
+    },
+
+    async deleteAsset(projectId, assetPath) {
+      assets.delete(`${projectId}/${assetPath}`);
     },
   };
 };
