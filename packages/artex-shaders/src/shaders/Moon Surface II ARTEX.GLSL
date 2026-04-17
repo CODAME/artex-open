@@ -182,7 +182,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   col *= 1.75 * smoothstep(length(uv) * 0.35, 0.75, 0.4);
 
   // Subtle grain
-  float grain = artex_hash((artex_hash(vec2(uv.x, 0.0)) + uv.y) * uTime + 0.1) * 0.08;
+  float grain = artex_hash(vec2((artex_hash(vec2(uv.x, 0.0)) + uv.y) * uTime + 0.1, uv.y)) * 0.08;
   col += grain * strength;
 
   // Audio: deepen shadows on bass

@@ -371,17 +371,9 @@ void main() {
   float traceField = fbm((uv + vec2(uTime * 0.03, -uTime * 0.02)) * (5.0 + trailDecay * 2.0));
   field += eyeTrace * (0.08 + afterglow * 0.2) + traceField * imprintStrength * 0.1;
 
-  // Media presence detection
-  vec4 artwork = artex_sampleMain(uv);
-  float mediaPresence = smoothstep(0.0, 0.05, artwork.a);
-  float strength = uEffectStrength;
-
-  // Standalone: procedural base layer when no media
-  float proceduralLuma = fbm(uv * 3.0 + uTime * 0.05) * 0.6 + 0.2;
-  vec3 proceduralBase = mix(colorBaseField, colorMidField, proceduralLuma);
-  proceduralBase = mix(proceduralBase, colorAccentField, smoothstep(0.5, 0.9, proceduralLuma));
-
-  vec4 baseImage = mix(vec4(proceduralBase, 1.0), artwork, mediaPresence);
+  // This shader generates its own procedural cloud field — no standalone fallback needed.
+  // When media is loaded, blend it in; when standalone, the field renders on its own.
+  vec4 baseImage = artex_sampleMain(uv);
   float baseLuma = dot(baseImage.rgb, vec3(0.299, 0.587, 0.114));
   field += baseLuma * (0.08 + porosity * 0.12);
 
@@ -405,5 +397,5 @@ void main() {
   color *= vignette;
   color *= 0.95 + uEffectStrength * 0.08;
 
-  gl_FragColor = vec4(color, max(artwork.a, strength * (1.0 - mediaPresence)));
+  gl_FragColor = vec4(color, clamp(value + afterglow * 0.14, 0.0, 1.0));
 }
