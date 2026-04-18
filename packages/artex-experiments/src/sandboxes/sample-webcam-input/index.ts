@@ -52,8 +52,9 @@ export class SampleWebcamAdapter implements MediaInputAdapter {
     this.video.playsInline = true;
     await this.video.play();
 
-    // Small off-screen canvas for pixel analysis
+    // Small off-screen canvas for pixel analysis — keep hidden so it never bleeds into the DOM
     this.canvas = document.createElement("canvas");
+    this.canvas.style.display = "none";
     this.canvas.width  = 64;
     this.canvas.height = 48;
     this.ctx = this.canvas.getContext("2d");
