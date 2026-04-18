@@ -13,6 +13,10 @@
     "./project-package": "./src/projectPackage.ts",
     "./package-contract": "./src/packageContract.ts",
     "./ai/policy": "./src/ai/policy.ts",
-    "./ai/suggestion-lifecycle": "./src/ai/suggestionLifecycle.ts"
+    "./ai/suggestion-lifecycle": "./src/ai/suggestionLifecycle.ts",
+    "./tiers": "./src/tiers.ts",
+    "./v2/types": "./src/v2/types.ts",
+    "./v3/types": "./src/v3/types.ts",
+    "./v3/validation": "./src/v3/validation.ts"
   }
 }
