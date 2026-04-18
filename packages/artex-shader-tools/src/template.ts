@@ -129,7 +129,9 @@ const mainBody = (opts: GenerateTemplateOptions) => {
   }
 
   return `void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
+  // Guard against a 0×0 canvas so divisions never produce NaN/Inf.
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 uv  = gl_FragCoord.xy / res;
 
 ${sampleLine}
 ${effectLines.join("\n")}

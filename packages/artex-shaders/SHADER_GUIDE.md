@@ -132,6 +132,108 @@ void main() {
 
 ---
 
+## Robust Shader Patterns
+
+These patterns keep your shader stable across the full tier range — desktop
+high-tier down to low-end mobile — and avoid rare-but-fatal edge cases.
+
+### 1. Always guard against a 0×0 canvas
+
+Before the first resize, `uResolution` may be `(0, 0)`. Dividing by it
+produces `NaN`/`Inf` UVs that poison every texture lookup. Always clamp:
+
+```glsl
+void main() {
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 uv  = gl_FragCoord.xy / res;
+  // …
+}
+```
+
+The validator emits a warning if you divide by `uResolution` without a guard.
+
+### 2. Use `highp` for hash functions
+
+Classic shader hashes like
+`fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453)` overflow `mediump`
+(~16-bit mantissa) on mobile GPUs, producing banding or a solid colour.
+Always mark hash functions `highp`:
+
+```glsl
+highp float artex_hash(highp vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+```
+
+If you import the helper from `@artex/shader-tools` (`ARTEX_HASH_FN`), the
+`highp` qualifiers are already applied.
+
+### 3. Avoid deep uniform-conditioned branching
+
+Tile-based mobile GPUs serialise divergent branches on uniforms. A function
+with more than ~3 sequential `if (uSomething == ...)` checks will cause a
+noticeable fill-rate cliff on the low tier.
+
+**Prefer:** `step()`, `mix()`, small lookup arrays, or index-driven helpers.
+
+```glsl
+// Bad: 4-way branch on a uniform
+if (uMode == 0) return a;
+else if (uMode == 1) return b;
+else if (uMode == 2) return c;
+else                 return d;
+
+// Better: mix between two precomputed paths
+vec4 result = mix(a, b, step(0.5, float(uMode)));
+```
+
+The validator emits an info-level diagnostic when it detects functions with
+more than 3 uniform-conditioned `if` branches.
+
+### 4. Clamp live-input uniforms defensively
+
+Adapters try to hand you clean `0..1` values, but transient glitches happen
+(a dropped camera frame, a bad proximity read). Wrap the value if your
+effect visibly breaks when the uniform drifts outside its documented range:
+
+```glsl
+float proximity = clamp(uProximity, 0.0, 1.0);
+```
+
+### 5. Fallback-variant pattern (degrade gracefully)
+
+Live-input uniforms (`uAudioLevel`, `uCameraLevel`, `uProximity`,
+`uFlowEnabled`, `uUseStateBlending`, etc.) are **always** declared, but may
+sit at `0` when no adapter is connected. Your shader must still look
+intentional in that state — a black screen or a frozen frame is a bug.
+
+**Passthrough-when-disabled** is the idiomatic pattern. Example from
+`Sample Flow Field ARTEX.glsl`:
+
+```glsl
+vec2 artex_applyFlow(vec2 uv) {
+  if (uFlowEnabled != 1) return uv;       // passthrough
+  // … compute distortion …
+  return uv + distortion;
+}
+```
+
+Example from `Sample State Blend ARTEX.glsl`:
+
+```glsl
+vec4 artex_blendStates(vec2 uv) {
+  if (uUseStateBlending != 1) {
+    return texture2D(iChannel0, uv);       // fall back to base artwork
+  }
+  // … blend uStateA…uStateD …
+}
+```
+
+**Rule of thumb:** a shader should render a pleasing still image when **every
+live uniform is zero**. Use `iChannel0` as the canonical fallback source.
+
+---
+
 ## Capability Detection
 
 The library auto-infers capabilities by scanning your shader source for
@@ -178,6 +280,28 @@ npm run build
 
 For visual confirmation, open a PR. Once merged, your shader will appear in
 the ARTEX Studio Shaders panel.
+
+### Author-Time Checks (via `@artex/shader-tools`)
+
+The private ARTEX runtime uses `@artex/shader-tools` to validate shaders
+before dispatch. When contributing shaders here, the same checks will run
+against your file during PR CI. You can anticipate them locally — the
+relevant diagnostic classes are:
+
+- **error**: missing `void main()` entry point, missing `gl_FragColor`
+  assignment, wrong uniform type.
+- **warning**: missing `precision` declaration, Shadertoy remnants
+  (`iTime`, `mainImage`), undeclared-but-used ARTEX uniforms, dividing by
+  `uResolution` without a zero-guard (see *Robust Shader Patterns* §1).
+- **info**: deep uniform-conditioned branching (see §3).
+
+### Future work (not in scope today)
+
+A browser-based **live editor** — in-page GLSL authoring with hot reload,
+parameter sliders, and inline validator diagnostics — is planned but not
+part of this package. Shader authoring today is a file-based workflow
+(edit → PR → merge → appear in Studio). The live-editor design is tracked
+in the private `ARTEX` repo roadmap.
 
 ---
 

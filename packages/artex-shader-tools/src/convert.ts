@@ -16,6 +16,16 @@ import {
 
 export type ShaderSourceFormat = "shadertoy" | "glsl-sandbox" | "raw";
 
+/**
+ * Which WebGL / GLSL-ES version the output should target.
+ *  - `webgl1` (default): GLSL ES 1.0. Uses `texture2D()` and `gl_FragColor`.
+ *  - `webgl2`:           GLSL ES 3.0. Emits `#version 300 es`, declares an
+ *                        `out vec4 artexFragColor;`, and rewrites
+ *                        `texture2D(` → `texture(` and `gl_FragColor` →
+ *                        `artexFragColor`.
+ */
+export type ShaderTargetVersion = "webgl1" | "webgl2";
+
 export interface ConvertShaderOptions {
   /** Source format. When "auto", the converter inspects the GLSL to guess. */
   format?: ShaderSourceFormat | "auto";
@@ -25,6 +35,8 @@ export interface ConvertShaderOptions {
   declareUniforms?: boolean;
   /** Replace `texture()` with `texture2D()` for GLSL ES 1.0. Default true. */
   fixTextureCalls?: boolean;
+  /** Target WebGL/GLSL-ES version. Default "webgl1". */
+  targetVersion?: ShaderTargetVersion;
 }
 
 export interface ConvertShaderResult {
@@ -36,6 +48,8 @@ export interface ConvertShaderResult {
   warnings: string[];
   /** Uniforms that were auto-declared. */
   addedUniforms: string[];
+  /** Target WebGL/GLSL-ES version that was applied. */
+  targetVersion: ShaderTargetVersion;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,11 +80,9 @@ const rewriteShadertoyMain = (source: string): { source: string; warnings: strin
 
   let converted = source.replace(SHADERTOY_MAIN_RE, "void main()");
 
-  // Replace the user's fragColor variable with gl_FragColor
   const fragColorRe = new RegExp(`\\b${fragColorVar}\\b`, "g");
   converted = converted.replace(fragColorRe, "gl_FragColor");
 
-  // Replace the user's fragCoord variable with gl_FragCoord.xy
   const fragCoordRe = new RegExp(`\\b${fragCoordVar}\\b`, "g");
   converted = converted.replace(fragCoordRe, "gl_FragCoord.xy");
 
@@ -84,7 +96,6 @@ const remapUniforms = (source: string, map: Record<string, string>): { source: s
   for (const [foreign, artex] of Object.entries(map)) {
     const re = new RegExp(`\\b${foreign}\\b`, "g");
     if (re.test(result)) {
-      // Handle iResolution vec3→vec2 narrowing
       if (foreign === "iResolution") {
         result = result.replace(/\biResolution\.xy\b/g, "uResolution");
         result = result.replace(/\biResolution\b/g, "uResolution");
@@ -108,14 +119,12 @@ const UNIFORM_DECL_RE = /uniform\s+\w+\s+(\w+)\s*;/g;
 const UNIFORM_USE_RE = (name: string) => new RegExp(`\\b${name}\\b`);
 
 const autoDeclareUniforms = (source: string): { source: string; added: string[] } => {
-  // Collect already-declared uniforms
   const declared = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = UNIFORM_DECL_RE.exec(source)) !== null) {
     declared.add(m[1]);
   }
 
-  // Find ARTEX uniforms used but not declared
   const toAdd: string[] = [];
   for (const u of ARTEX_UNIFORMS) {
     if (!declared.has(u.name) && UNIFORM_USE_RE(u.name).test(source)) {
@@ -125,7 +134,6 @@ const autoDeclareUniforms = (source: string): { source: string; added: string[] 
 
   if (toAdd.length === 0) return { source, added: [] };
 
-  // Insert after precision or at top
   const precisionMatch = source.match(/precision\s+\w+\s+float\s*;\n*/);
   if (precisionMatch) {
     const insertPos = (precisionMatch.index ?? 0) + precisionMatch[0].length;
@@ -144,6 +152,39 @@ const autoDeclareUniforms = (source: string): { source: string; added: string[] 
 };
 
 // ---------------------------------------------------------------------------
+// WebGL2 (GLSL ES 3.0) pass
+// ---------------------------------------------------------------------------
+
+const WEBGL2_OUT_VAR = "artexFragColor";
+
+/**
+ * Transform a GLSL ES 1.0 fragment shader into GLSL ES 3.0 form:
+ *  - Prepend `#version 300 es` and a precision declaration.
+ *  - Declare an `out vec4 artexFragColor;` at the top.
+ *  - Rewrite `texture2D(` → `texture(`.
+ *  - Rewrite `gl_FragColor` → `artexFragColor`.
+ *  - Rewrite `varying` → `in` (fragment stage).
+ */
+const toWebGL2 = (source: string): string => {
+  let result = source;
+  // Drop any existing `#version ...` line so we can re-prepend a clean one.
+  result = result.replace(/^#version[^\n]*\n?/, "");
+
+  // Ensure we have a fragment-stage precision declaration.
+  const hasPrecision = /precision\s+(lowp|mediump|highp)\s+float/.test(result);
+  const precisionLine = hasPrecision ? "" : "precision highp float;\n";
+
+  result = result.replace(/\btexture2D\s*\(/g, "texture(");
+  result = result.replace(/\bgl_FragColor\b/g, WEBGL2_OUT_VAR);
+  // `varying` in a fragment shader becomes `in` in ES 3.0.
+  result = result.replace(/(^|\s)varying\s+/g, "$1in ");
+
+  const header =
+    `#version 300 es\n${precisionLine}out vec4 ${WEBGL2_OUT_VAR};\n\n`;
+  return header + result;
+};
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
@@ -156,6 +197,7 @@ export const convertShader = (
     addPrecision = true,
     declareUniforms = true,
     fixTextureCalls = true,
+    targetVersion = "webgl1",
   } = options;
 
   const detectedFormat = format === "auto" ? detectFormat(source) : format;
@@ -177,13 +219,13 @@ export const convertShader = (
     warnings.push(...uniformResult.warnings);
   }
 
-  // 2. texture() → texture2D()
-  if (fixTextureCalls) {
+  // 2. texture() → texture2D() (only for WebGL1 target)
+  if (fixTextureCalls && targetVersion === "webgl1") {
     glsl = fixTexture(glsl);
   }
 
-  // 3. Precision header
-  if (addPrecision) {
+  // 3. Precision header (not needed for WebGL2 path — toWebGL2 adds its own)
+  if (addPrecision && targetVersion === "webgl1") {
     glsl = ensurePrecision(glsl);
   }
 
@@ -195,5 +237,10 @@ export const convertShader = (
     addedUniforms = declResult.added;
   }
 
-  return { glsl, detectedFormat, warnings, addedUniforms };
+  // 5. Optional WebGL2 retarget
+  if (targetVersion === "webgl2") {
+    glsl = toWebGL2(glsl);
+  }
+
+  return { glsl, detectedFormat, warnings, addedUniforms, targetVersion };
 };

@@ -47,7 +47,7 @@ vec4 tex2D(sampler2D s, vec3 uv) { return texture2D(s, uv.xy); }
 vec4 tex2D(sampler2D s, vec4 uv) { return texture2D(s, uv.xy); }
 
 // --- Value noise helpers — copied from rain.glsl ---
-float artex_hash(vec2 p) {
+highp float artex_hash(highp vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
@@ -75,19 +75,24 @@ vec2 artex_applyFlow(vec2 uv) {
   return uv + distortion;
 }
 
-// --- artex_blendStates — copied verbatim from rain.glsl ---
+// --- artex_blendStates — matches @artex/shader-tools ARTEX_BLEND_STATES_FN ---
 // Note: uses iChannel0 as the no-states fallback (public API convention).
 vec4 artex_blendStates(vec2 uv) {
   if (uUseStateBlending != 1) {
     return tex2D(iChannel0, uv);
   }
-  if (uStateCount <= 1) {
+  // Clamp uStateCount into the documented 1..4 range so malformed
+  // uniforms never dispatch to an undefined branch.
+  int count = uStateCount;
+  if (count < 1) count = 1;
+  if (count > 4) count = 4;
+  if (count == 1) {
     return tex2D(uStateA, uv);
-  } else if (uStateCount == 2) {
+  } else if (count == 2) {
     vec4 stateA = tex2D(uStateA, uv);
     vec4 stateB = tex2D(uStateB, uv);
     return mix(stateA, stateB, uBlendFactor);
-  } else if (uStateCount == 3) {
+  } else if (count == 3) {
     if (uBlendFactor < 0.5) {
       float t = uBlendFactor * 2.0;
       return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), t);
@@ -118,13 +123,15 @@ vec4 artex_sampleMain(vec2 uv) {
 }
 
 void main() {
-  vec2 uv  = gl_FragCoord.xy / uResolution;
+  // Zero-guard — see Sample Hello World for the full rationale.
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 uv  = gl_FragCoord.xy / res;
 
   // State-blended base (or iChannel0 fallback) via the canonical helpers
   vec4 base = artex_sampleMain(uv);
 
   // Edge-glow overlay: 4-tap gradient magnitude across the blended image
-  vec2 px  = 1.5 / uResolution;
+  vec2 px  = 1.5 / res;
   float rt = artex_sampleMain(uv + vec2( px.x,  0.0)).r;
   float lt = artex_sampleMain(uv + vec2(-px.x,  0.0)).r;
   float up = artex_sampleMain(uv + vec2( 0.0,  px.y)).r;

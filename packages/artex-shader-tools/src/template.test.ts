@@ -55,4 +55,15 @@ describe("generateTemplate", () => {
     expect(glsl).not.toContain("artex_applyFlow");
     expect(glsl).not.toContain("artex_hash");
   });
+
+  it("emits a resolution zero-guard in main() so UVs never divide by zero", () => {
+    const glsl = generateTemplate();
+    expect(glsl).toMatch(/max\s*\(\s*uResolution\s*,\s*vec2\s*\(\s*1\.0\s*\)\s*\)/);
+    expect(glsl).toMatch(/gl_FragCoord\.xy\s*\/\s*res/);
+  });
+
+  it("guarded template never directly divides by uResolution", () => {
+    const glsl = generateTemplate({ audio: true, flow: true, states: true });
+    expect(glsl).not.toMatch(/gl_FragCoord\.xy\s*\/\s*uResolution/);
+  });
 });

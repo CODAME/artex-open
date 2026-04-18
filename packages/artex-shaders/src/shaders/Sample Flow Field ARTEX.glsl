@@ -30,7 +30,7 @@ uniform float uFlowSpeed;      // 0..1  how fast the noise field evolves with uT
 uniform float uFlowScale;      // 0..1  spatial frequency of the noise field
 
 // --- Value noise helpers — copied from rain.glsl (canonical ARTEX pattern) ---
-float artex_hash(vec2 p) {
+highp float artex_hash(highp vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
@@ -59,7 +59,9 @@ vec2 artex_applyFlow(vec2 uv) {
 }
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
+  // Zero-guard — see Sample Hello World for the full rationale.
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 uv  = gl_FragCoord.xy / res;
 
   // Primary flow warp via the canonical artex_applyFlow helper
   vec2 flowUv = artex_applyFlow(uv);
