@@ -31,7 +31,10 @@ vec3 hueShift(vec3 rgb, float hue) {
 }
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
+  // Zero-guard: a 0×0 canvas (before the first resize) would otherwise
+  // make `gl_FragCoord.xy / uResolution` produce NaN/Inf and poison the UV.
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 uv  = gl_FragCoord.xy / res;
   vec4 base = texture2D(iChannel0, uv);
 
   // Slowly shift hue over time, nudged by mood

@@ -60,7 +60,7 @@ vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
 vec4 tex2D(sampler2D s, vec3 uv) { return texture2D(s, uv.xy); }
 vec4 tex2D(sampler2D s, vec4 uv) { return texture2D(s, uv.xy); }
 
-float artex_hash(vec2 p) {
+highp float artex_hash(highp vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 

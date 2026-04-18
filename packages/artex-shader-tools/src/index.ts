@@ -1,7 +1,7 @@
 export { convertShader } from "./convert.ts";
 export type { ShaderSourceFormat, ConvertShaderOptions, ConvertShaderResult } from "./convert.ts";
 
-export { validateShader } from "./validate.ts";
+export { validateShader, stripComments } from "./validate.ts";
 export type {
   DiagnosticSeverity,
   ShaderDiagnostic,
@@ -24,4 +24,5 @@ export {
   ARTEX_APPLY_FLOW_FN,
   ARTEX_BLEND_STATES_FN,
   ARTEX_SAMPLE_MAIN_FN,
+  ARTEX_SAFE_RESOLUTION_FN,
 } from "./helpers.ts";

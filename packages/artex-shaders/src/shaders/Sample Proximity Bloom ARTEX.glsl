@@ -28,7 +28,7 @@ uniform float uCameraLevel; // 0..1  camera brightness (optional)
 
 // Simple cross-tap soft bloom
 vec3 softBloom(vec2 uv, float radius) {
-  vec2 px = radius / uResolution;
+  vec2 px = radius / max(uResolution, vec2(1.0));
   vec3 col = texture2D(iChannel0, uv).rgb;
   col += texture2D(iChannel0, uv + vec2( px.x,  0.0)).rgb;
   col += texture2D(iChannel0, uv + vec2(-px.x,  0.0)).rgb;
@@ -42,7 +42,9 @@ vec3 softBloom(vec2 uv, float radius) {
 }
 
 void main() {
-  vec2 uv  = gl_FragCoord.xy / uResolution;
+  // Zero-guard — see Sample Hello World for the full rationale.
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 uv  = gl_FragCoord.xy / res;
   vec4 base = texture2D(iChannel0, uv);
 
   // Bloom grows with proximity

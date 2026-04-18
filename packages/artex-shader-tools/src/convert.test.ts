@@ -128,3 +128,58 @@ describe("convertShader — options", () => {
     expect(detectedFormat).toBe("raw");
   });
 });
+
+describe("convertShader — WebGL2 target", () => {
+  it("defaults to webgl1 when no targetVersion is provided", () => {
+    const { targetVersion } = convertShader(RAW_ARTEX_SHADER);
+    expect(targetVersion).toBe("webgl1");
+  });
+
+  it("returns webgl2 targetVersion when requested", () => {
+    const { targetVersion } = convertShader(RAW_ARTEX_SHADER, { targetVersion: "webgl2" });
+    expect(targetVersion).toBe("webgl2");
+  });
+
+  it("prepends #version 300 es for webgl2", () => {
+    const { glsl } = convertShader(RAW_ARTEX_SHADER, { targetVersion: "webgl2" });
+    expect(glsl).toMatch(/^#version 300 es/);
+  });
+
+  it("declares an `out vec4 artexFragColor` in webgl2 output", () => {
+    const { glsl } = convertShader(RAW_ARTEX_SHADER, { targetVersion: "webgl2" });
+    expect(glsl).toContain("out vec4 artexFragColor;");
+  });
+
+  it("rewrites texture2D to texture in webgl2", () => {
+    const { glsl } = convertShader(RAW_ARTEX_SHADER, { targetVersion: "webgl2" });
+    expect(glsl).not.toMatch(/\btexture2D\s*\(/);
+    expect(glsl).toMatch(/\btexture\s*\(/);
+  });
+
+  it("rewrites gl_FragColor to artexFragColor in webgl2", () => {
+    const { glsl } = convertShader(RAW_ARTEX_SHADER, { targetVersion: "webgl2" });
+    expect(glsl).not.toMatch(/\bgl_FragColor\b/);
+    expect(glsl).toContain("artexFragColor");
+  });
+
+  it("rewrites `varying` to `in` in webgl2", () => {
+    const source = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D iChannel0;
+void main() { gl_FragColor = texture2D(iChannel0, vUv); }
+`.trim();
+    const { glsl } = convertShader(source, { targetVersion: "webgl2" });
+    expect(glsl).toMatch(/\bin\s+vec2\s+vUv\b/);
+    expect(glsl).not.toMatch(/\bvarying\b/);
+  });
+
+  it("drops an existing #version line before re-prepending for webgl2", () => {
+    const source = `#version 100\nprecision highp float;\nvoid main() { gl_FragColor = vec4(1.0); }`;
+    const { glsl } = convertShader(source, { targetVersion: "webgl2", declareUniforms: false });
+    // Only one #version line, and it is the ES 3.0 one.
+    const versionMatches = glsl.match(/#version/g) ?? [];
+    expect(versionMatches).toHaveLength(1);
+    expect(glsl).toMatch(/^#version 300 es/);
+  });
+});

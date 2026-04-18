@@ -1,6 +1,19 @@
 import { isBuiltinShaderHiddenFromLibrary } from "./hiddenBuiltinShaders";
 import type { ShaderExtensionDefinition } from "@artex/extensions";
 
+/**
+ * Strip single-line (`//`) and block (`/* * /`) comments from GLSL source so
+ * capability-detection token scans don't get false positives from commented
+ * uniform mentions (e.g. `// demonstrates uAudioLevel`).
+ *
+ * Inlined here (rather than imported from @artex/shader-tools) to respect the
+ * workspace-boundary rule that keeps artex-shaders a leaf package.
+ */
+const stripComments = (source: string): string => {
+  const noBlocks = source.replace(/\/\*[\s\S]*?\*\//g, (match) => match.replace(/[^\n]/g, " "));
+  return noBlocks.replace(/\/\/[^\n]*/g, "");
+};
+
 export interface BuiltinShaderLibraryCapabilities {
   usesAudio: boolean;
   usesCamera: boolean;
@@ -159,7 +172,9 @@ const toShaderLabel = (baseName: string): string => {
 };
 
 const inferBuiltinShaderCapabilities = (source: string): BuiltinShaderLibraryCapabilities => {
-  const lowerSource = source.toLowerCase();
+  // Strip comments so that capability-token mentions inside block/line comments
+  // (e.g. "// demonstrates uAudioLevel") don't falsely enable adapters.
+  const lowerSource = stripComments(source).toLowerCase();
   const hasAny = (tokens: string[]) => tokens.some((token) => lowerSource.includes(token.toLowerCase()));
   return {
     usesAudio: hasAny(["uAudioLevel", "uBassLevel"]),

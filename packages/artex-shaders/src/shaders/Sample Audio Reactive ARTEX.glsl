@@ -27,7 +27,9 @@ uniform float uBassLevel;      // 0..1  bass frequency amplitude
 uniform float uTransientLevel; // 0..1  sharp transients (claps, snaps)
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
+  // Zero-guard — see Sample Hello World for the full rationale.
+  vec2 res = max(uResolution, vec2(1.0));
+  vec2 uv  = gl_FragCoord.xy / res;
 
   // --- Bass warp: push UV outward from centre on low hits ---
   vec2 centre = vec2(0.5);
