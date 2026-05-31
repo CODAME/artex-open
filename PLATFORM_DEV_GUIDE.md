@@ -590,7 +590,7 @@ Changes to `packages/artex-contract` affect **every package and every future
 runtime implementation**, including the Platform API (`.services/artex-platform-api`),
 which validates all input against contract types. Treat the contract as a public API.
 
-### Compatibility rules (from ARCHITECTURE.md)
+### Compatibility rules (from docs/architecture.md)
 
 1. `config.json.version` is explicit and validated — bump it for breaking changes
 2. Forward-newer configs are rejected with a clear error
@@ -607,7 +607,7 @@ all consumed by both the render-core adapters and the Platform API.
 1. Post a proposal in the `extension_proposal` issue template
 2. Check with a CODAME core dev (changes may affect the runtime player contract)
 3. Add a test in `packages/artex-contract/` covering parse and round-trip
-4. Update `PACKAGE_CONTRACT.md` and `CHANGELOG.md`
+4. Update `docs/package-contract.md` and `CHANGELOG.md` in the ARTEX repo
 
 ---
 
