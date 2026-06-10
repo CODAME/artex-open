@@ -5,6 +5,10 @@ a creator tool for composing artist-authored interactive experiences.
 
 > **North star:** Everything serves living art.
 
+## ARTEX Display
+
+Download the desktop player from [Releases](https://github.com/CODAME/artex-open/releases/latest). See [DISPLAY_GUIDE.md](./DISPLAY_GUIDE.md) for installation and usage instructions.
+
 ## Packages
 
 | Package | Description | License |
