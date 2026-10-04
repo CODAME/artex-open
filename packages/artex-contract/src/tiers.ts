@@ -58,6 +58,10 @@ export interface ArtexTierFeatures {
   // May this tier sign into the Studio Desktop app (2026-09-16, Bruno)? The
   // web Studio and the create wizard stay free for everyone; this gates only
   // the standalone/Electron build, which is sold as part of paid Studio.
+  // While STUDIO_DESKTOP_OPEN_TO_ARTISTS is on (2026-10-04, Bruno: the app is
+  // experimental) every Artist may sign in whatever this says; read it through
+  // `tierAllowsForRole`. This stays the plan-level answer for when the flag is
+  // flipped off and for a Visitor.
   // Enforced server-side at /desktop-auth/approve (server.mjs) — that is the
   // real gate, since the installer itself is a public GitHub release asset
   // and cannot be access-controlled at the download link.
@@ -278,7 +282,9 @@ export function resolveEffectiveTierId(
 }
 
 export function tierAllows(tierId: ArtexTierId, feature: keyof ArtexTierFeatures): boolean {
-  const tier = ARTEX_TIERS[tierId];
+  // Declared possibly-undefined: callers pass raw stored strings, so an unknown
+  // id must read as "not allowed" rather than throw.
+  const tier: ArtexTierDefinition | undefined = ARTEX_TIERS[tierId];
   if (!tier) return false;
   const value = tier.features[feature];
   if (typeof value === "boolean") return value;
@@ -296,9 +302,81 @@ export type ArtexTierLimitFeature =
   | "broadcastSendReach";
 
 export function tierLimit(tierId: ArtexTierId, feature: ArtexTierLimitFeature): number {
-  const tier = ARTEX_TIERS[tierId];
+  const tier: ArtexTierDefinition | undefined = ARTEX_TIERS[tierId];
   if (!tier) return 0;
   return tier.features[feature];
+}
+
+// ---------------------------------------------------------------------------
+// The Artist floor — a role is a floor and a plan only adds to it.
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether signing into Studio Desktop is open to every Artist while the app is
+ * labelled experimental (owner decision, Bruno, 2026-10-04, amending the
+ * 2026-09-16 paid gate; AGENTS.md §2.4). THE ONE FLAG: flip it to `false` when
+ * the feature stops being experimental and the gate returns to
+ * `studioDesktopAccess` on the plan, with no other edit. Mirrored in
+ * `.services/artex-platform-api/tierBilling.mjs` (drift-tested).
+ */
+// `as boolean` widens the literal so the flag's off branch stays reachable to the
+// type checker, and so lint does not call the gate below dead code.
+export const STUDIO_DESKTOP_OPEN_TO_ARTISTS = true as boolean;
+
+/**
+ * What every Artist has before any plan is counted (docs/pricing-business-model-v2.md
+ * R13). The ARTEX growth loop is artists sharing their pages, and a one-work,
+ * zero-AI Free tier does not start it, so a Free Artist gets a real practice.
+ * Articles are not a number here: they are gated by role alone, with no plan.
+ *
+ * Mirrored in `.services/artex-platform-api/tierBilling.mjs` (drift-tested).
+ */
+export const ARTIST_FLOOR = {
+  maxPublishedPackages: 5,
+  aiGenerationQuota: 20,
+  studioDesktopAccess: STUDIO_DESKTOP_OPEN_TO_ARTISTS,
+} as const;
+
+/**
+ * Roles that publish, and so carry the floor: `artist`, and `admin` (who passes
+ * every creator check). A Visitor (`viewer`) is browse-only and has no floor,
+ * so a Visitor holding Collection has exactly Collection's own allowance.
+ */
+export function roleHasArtistFloor(role: string | null | undefined): boolean {
+  return role === "artist" || role === "admin";
+}
+
+/**
+ * The allowance a holder of `role` on `tierId` actually has for a numeric
+ * capacity: for an Artist, `max(floor, plan)` per dimension (`-1` unlimited
+ * beats any number). Plans only add. An Artist who also holds Collection can
+ * never have less than a free Artist.
+ */
+export function tierLimitForRole(
+  tierId: ArtexTierId,
+  feature: ArtexTierLimitFeature,
+  role: string | null | undefined,
+): number {
+  const plan = tierLimit(tierId, feature);
+  if (!roleHasArtistFloor(role)) return plan;
+  if (feature !== "maxPublishedPackages" && feature !== "aiGenerationQuota") return plan;
+  if (plan === -1) return -1;
+  return Math.max(ARTIST_FLOOR[feature], plan);
+}
+
+/**
+ * Boolean counterpart of {@link tierLimitForRole}. Only `studioDesktopAccess`
+ * has a floor; every other feature reads the plan alone.
+ */
+export function tierAllowsForRole(
+  tierId: ArtexTierId,
+  feature: keyof ArtexTierFeatures,
+  role: string | null | undefined,
+): boolean {
+  if (feature === "studioDesktopAccess" && roleHasArtistFloor(role) && ARTIST_FLOOR.studioDesktopAccess) {
+    return true;
+  }
+  return tierAllows(tierId, feature);
 }
 
 // ---------------------------------------------------------------------------
