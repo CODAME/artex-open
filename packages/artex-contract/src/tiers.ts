@@ -163,13 +163,16 @@ export const ARTEX_TIERS: Record<ArtexTierId, ArtexTierDefinition> = {
   collection: {
     id: "collection",
     name: "ARTEX Collection",
-    description: "For collectors: full-resolution access and a collection profile",
+    description: "For collectors: full-resolution access, a collection profile, and one personal Display for your own works",
     monthlyPriceMinCents: 900,
     annualPriceMinCents: 9000,
     payWhatYouWant: false,
     features: {
       maxPublishedPackages: 1,
-      maxInstallations: 0,
+      // One personal Display (R13): plays only works the holder owns or has
+      // bought, for personal use, never attached to an organization. Not an
+      // org allowance: `tierBilling.mjs` keeps Collection at 0 for org claims.
+      maxInstallations: 1,
       attributionRequired: true,
       supportLevel: "community",
       hardwareBundle: false,
