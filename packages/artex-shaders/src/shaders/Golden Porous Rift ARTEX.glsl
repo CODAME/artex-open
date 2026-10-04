@@ -1,6 +1,7 @@
 // Golden Porous Rift ARTEX.glsl
 // Inspired by a molten, porous golden cavern.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float iTime;
 uniform float uTargetAspect;

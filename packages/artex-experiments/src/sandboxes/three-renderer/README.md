@@ -10,7 +10,7 @@
 Explore a Three.js-based renderer backend as an alternative to the WebGL2
 compositor for 3D-scene-based artworks and reference-effect replication.
 
-This sandbox informs the future direction described in `ARCHITECTURE.md §Later Reference-Effect Direction`.
+This sandbox informs the future direction described in `docs/architecture.md §Experimental tracks`.
 
 ---
 

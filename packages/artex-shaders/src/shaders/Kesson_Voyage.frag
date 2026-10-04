@@ -1,6 +1,7 @@
 // Kesson Voyage ARTEX — Gyroid tunnel artwork warper
 // Rewritten for ARTEX compositing with reduced ray march steps.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float uTargetAspect;
 uniform float targetAspect;

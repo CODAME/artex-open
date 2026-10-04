@@ -1,6 +1,7 @@
 // Moon Surface II ARTEX — Terrain-warped artwork with lunar topography
 // Based on Nikos Papadopoulos (4rknova, 2015), rewritten for ARTEX compositing.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float uTargetAspect;
 uniform float targetAspect;

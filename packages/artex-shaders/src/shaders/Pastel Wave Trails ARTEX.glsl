@@ -1,6 +1,7 @@
 // Pastel Wave Trails ARTEX.glsl
 // p5-style layered gradient wave ribbons translated into a single-pass ARTEX shader.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float iTime;
 uniform float uTargetAspect;

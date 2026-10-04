@@ -1,6 +1,7 @@
 // Reactive Compute Splat Bloom ARTEX.glsl
 // Floating translucent particle veil inspired by suspended liquid curl references.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float uTargetAspect;
 uniform float targetAspect;

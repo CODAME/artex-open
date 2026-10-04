@@ -1,6 +1,7 @@
 // Filament Column ARTEX.glsl
 // Reference: source video reference
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float iTime;
 uniform float uTargetAspect;

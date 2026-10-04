@@ -1,0 +1,136 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.322Z via scripts/extract_v1_fixtures.mjs from production piece id=55cdfc45-562c-46b9-8d30-4ef99723a23b (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "mobbod3d",
+  "sourcePieceId": "55cdfc45-562c-46b9-8d30-4ef99723a23b",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "MobBod3D",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "static",
+      "shader_modules": [],
+      "advancedShaderModules": [],
+      "shader": {
+        "flowIntensity": 0,
+        "flowSpeed": 0,
+        "flowScale": 1
+      },
+      "interactions": {
+        "audioReactive": true,
+        "proximitySensor": true,
+        "cameraReactive": true,
+        "gestureLab": false,
+        "supportsProximity": true,
+        "touchMediaControls": {
+          "enabled": false,
+          "desktopFallback": "auto",
+          "resetGesture": "double-tap",
+          "baseline": {
+            "translateX": 0,
+            "translateY": 0,
+            "scale": 1,
+            "rotationDegrees": 0
+          }
+        },
+        "interactionLabTarget": "both",
+        "audioReactiveGain": 0.98,
+        "audioReactiveIntensity": 1
+      },
+      "interaction": {
+        "supportsProximity": true,
+        "supportsAmbientLight": false,
+        "events": [
+          {
+            "trigger": "viewer_close",
+            "effect": "increase_breathing",
+            "intensityDelta": 0.24,
+            "cooldownSeconds": 45
+          }
+        ]
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "still",
+            "colorTemperatureShift": 0,
+            "noiseIntensity": 0,
+            "brightnessShift": 0
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 0,
+        "breathingEnabled": false,
+        "parallaxEnabled": false,
+        "colorShiftEnabled": false
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0,
+          "breathingIntensity": 0,
+          "textureDrift": 0
+        }
+      },
+      "mood": 0.01
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "primitive-intelligence-study-artex",
+        "activeShaderKey": "primitive-intelligence-study-artex",
+        "userShaderPatched": "// Primitive Intelligence Study ARTEX.glsl\n// Audio-reactive iris — loudness expands the core, bass increases ring weight,\n// pitch shifts internal hue, and intervals tint the outer shell.\nprecision mediump float;\nuniform float time;\nuniform float iTime;\nuniform float uTargetAspect;\nuniform float targetAspect;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform sampler2D uMainImage;\nuniform vec2 uMainImageResolution;\nuniform sampler2D uStateA;\nuniform vec2 uStateAResolution;\nuniform sampler2D uStateB;\nuniform vec2 uStateBResolution;\nuniform sampler2D uStateC;\nuniform vec2 uStateCResolution;\nuniform sampler2D uStateD;\nuniform vec2 uStateDResolution;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 uMediaTransform;\nuniform vec4 u_mediaTransform;\nuniform int uMediaTransformMainEnabled;\nuniform vec4 iDate;\nuniform vec4 iMouse;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform vec2 uLeftEye;\nuniform vec2 uRightEye;\nuniform vec2 uFaceCenter;\nuniform float uHasFace;\nuniform vec2 leftEye;\nuniform vec2 rightEye;\nuniform vec2 faceCenter;\nuniform float hasFace;\n\nuniform float uTime;\nuniform vec2 uResolution;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\n// ---- Utilities ----\n\n#define PI  3.14159265359\n#define TAU 6.28318530718\n\nfloat hash(float p) {\n  return fract(sin(p * 127.1) * 43758.5453);\n}\n\nfloat noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  f = f * f * (3.0 - 2.0 * f);\n  float a = hash(i.x + i.y * 57.0);\n  float b = hash(i.x + 1.0 + i.y * 57.0);\n  float c = hash(i.x + (i.y + 1.0) * 57.0);\n  float d = hash(i.x + 1.0 + (i.y + 1.0) * 57.0);\n  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n}\n\nfloat fbm(vec2 p, int oct) {\n  float v = 0.0;\n  float a = 0.5;\n  for (int i = 0; i < 6; i++) {\n    if (i >= oct) break;\n    v += a * noise(p);\n    p *= 2.1;\n    a *= 0.48;\n  }\n  return v;\n}\n\nvec3 hueShift(vec3 col, float shift) {\n  float angle = shift * TAU;\n  float s = sin(angle);\n  float c = cos(angle);\n  vec3 weights = vec3(0.2126, 0.7152, 0.0722);\n  float p = dot(col, weights);\n  return vec3(\n    p + (col.r - p) * c + (col.r - p) * s * 0.0,\n    p + (col.g - p) * c + (col.g - p) * s * -0.5774,\n    p + (col.b - p) * c + (col.b - p) * s * 0.5774\n  );\n}\n\n// ---- Iris pattern ----\n\nfloat irisPattern(vec2 uv, float r, float t, float audio, float bass) {\n  float angle = atan(uv.y, uv.x);\n  float dist  = length(uv);\n\n  // Radial fibres\n  float fibreCount = 24.0 + bass * 12.0;\n  float fibres = sin(angle * fibreCount + t * 0.5) * 0.5 + 0.5;\n  fibres = pow(fibres, 2.0 + audio * 3.0);\n\n  // Concentric rings — weight increases with bass\n  float ringFreq = 18.0 + bass * 10.0;\n  float rings = sin(dist * ringFreq - t * 1.2) * 0.5 + 0.5;\n  rings = pow(rings, 1.5);\n\n  // Organic distortion via FBM\n  float warp = fbm(uv * 3.0 + t * 0.15, 4) * 0.4;\n  float pattern = mix(fibres, rings, 0.5 + warp * 0.3);\n\n  // Iris boundary falloff\n  float innerEdge = smoothstep(r * 0.2, r * 0.35, dist);\n  float outerEdge = 1.0 - smoothstep(r * 0.75, r, dist);\n\n  return pattern * innerEdge * outerEdge;\n}\n\n// ---- Outer shell ----\n\nfloat shellGlow(vec2 uv, float r, float t, float bass) {\n  float dist = length(uv);\n  float shellInner = r * 0.95;\n  float shellOuter = r * 1.4 + bass * 0.15;\n\n  float glow = smoothstep(shellInner, shellOuter, dist);\n  glow *= 1.0 - smoothstep(shellOuter, shellOuter + 0.2, dist);\n\n  // Pulsing ring\n  float ringPulse = sin(t * 2.0 + dist * 12.0) * 0.5 + 0.5;\n  glow *= 0.6 + 0.4 * ringPulse;\n\n  return glow;\n}\n\n// ---- Pupil ----\n\nfloat pupil(vec2 uv, float radius) {\n  float d = length(uv);\n  return 1.0 - smoothstep(radius * 0.85, radius, d);\n}\n\n// ---- Main ----\n\nvoid main() {\n  float t = uTime > 0.0 ? uTime : iTime > 0.0 ? iTime : time;\n  vec2 res = uResolution.x > 0.0 ? uResolution : iResolution.xy;\n  vec2 uv = (gl_FragCoord.xy - res * 0.5) / min(res.x, res.y);\n\n  // Audio inputs (smoothed by engine)\n  float audio = clamp(uAudioLevel, 0.0, 1.0);\n  float bass  = clamp(uBassLevel, 0.0, 1.0);\n\n  // Param controls\n  float irisScale   = 0.25 + uEffectParam1 * 0.35;   // overall iris size\n  float hueOffset   = uEffectParam2;                   // hue rotation\n  float complexity   = 0.5 + uEffectParam3 * 0.5;     // pattern density\n\n  // Core radius expands with loudness\n  float baseRadius = irisScale;\n  float coreRadius = baseRadius + audio * 0.12;\n\n  // Pupil contracts with loudness (like a real eye)\n  float pupilRadius = coreRadius * (0.22 - audio * 0.08);\n  float pupilMask = pupil(uv, pupilRadius);\n\n  // Iris body\n  float iris = irisPattern(uv, coreRadius, t * complexity, audio, bass);\n\n  // Base warm palette — hue-shifted by pitch (param2) and bass\n  vec3 irisColorInner = vec3(0.85, 0.35, 0.12); // amber core\n  vec3 irisColorOuter = vec3(0.20, 0.10, 0.06); // dark umber\n  irisColorInner = hueShift(irisColorInner, hueOffset + bass * 0.12);\n  irisColorOuter = hueShift(irisColorOuter, hueOffset + bass * 0.06);\n\n  float dist = length(uv);\n  float radialMix = smoothstep(pupilRadius, coreRadius, dist);\n  vec3 irisColor = mix(irisColorInner, irisColorOuter, radialMix);\n\n  // Audio luminance boost\n  irisColor += iris * 0.35 * (1.0 + audio * 0.8);\n\n  // Outer shell — tinted by interval (bass-to-treble ratio)\n  float shell = shellGlow(uv, coreRadius, t, bass);\n  vec3 shellColor = vec3(0.45, 0.18, 0.08);\n  shellColor = hueShift(shellColor, hueOffset + 0.15);\n  shellColor *= 0.5 + bass * 0.6;\n\n  // Specular highlight on the iris\n  vec2 lightDir = vec2(0.3, 0.4);\n  float spec = pow(max(dot(normalize(uv), normalize(lightDir)), 0.0), 16.0);\n  spec *= smoothstep(coreRadius * 1.1, coreRadius * 0.3, dist);\n\n  // Compose layers\n  vec3 bg = vec3(0.02, 0.01, 0.01);\n  vec3 col = bg;\n\n  // Shell layer\n  col = mix(col, shellColor, shell * 0.7);\n\n  // Iris layer\n  float irisMask = smoothstep(coreRadius + 0.01, coreRadius - 0.02, dist)\n                 * (1.0 - smoothstep(pupilRadius - 0.01, pupilRadius + 0.02, 0.0));\n  col = mix(col, irisColor, irisMask);\n\n  // Pupil (near black with subtle reflection)\n  vec3 pupilColor = vec3(0.01, 0.005, 0.005) + spec * 0.3;\n  col = mix(col, pupilColor, pupilMask * 0.95);\n\n  // Global specular\n  col += spec * vec3(1.0, 0.95, 0.85) * 0.25;\n\n  // Subtle vignette\n  float vignette = 1.0 - dot(uv * 0.8, uv * 0.8);\n  col *= smoothstep(0.0, 0.6, vignette);\n\n  // Breathing idle pulse when no audio\n  float idle = (1.0 - audio) * 0.03 * sin(t * 0.8);\n  col += idle;\n\n  // Effect strength mix\n  float strength = clamp(uEffectStrength, 0.0, 1.0);\n  vec4 media = texture2D(uMainImage, gl_FragCoord.xy / res);\n  col = mix(media.rgb, col, strength);\n\n  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "Primitive Intelligence Study ARTEX.glsl",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "normal",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 1.44,
+        "shaderParams": {
+          "param1": 0.43,
+          "param2": 0.72,
+          "param3": 1.66
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": true,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 1
+      }
+    }
+  }
+}

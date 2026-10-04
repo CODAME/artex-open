@@ -1,0 +1,207 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.323Z via scripts/extract_v1_fixtures.mjs from production piece id=a88ded72-e2b9-4f63-b578-a47ae391ac7c (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "the-metamorphosis-portal-a88ded72",
+  "sourcePieceId": "a88ded72-e2b9-4f63-b578-a47ae391ac7c",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "The Metamorphosis Portal",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "static",
+      "shader_modules": [],
+      "advancedShaderModules": [],
+      "shader": {
+        "flowIntensity": 0,
+        "flowSpeed": 0,
+        "flowScale": 1
+      },
+      "interactions": {
+        "simpleInteractionsEnabled": false,
+        "simpleInteractionMode": "none",
+        "audioReactive": false,
+        "proximitySensor": false,
+        "cameraReactive": false,
+        "gestureLab": false,
+        "interactionSafeMode": true,
+        "interactionHud": false,
+        "interactionLabTarget": "both",
+        "interactionConsoleLogs": false,
+        "mediapipeGestures": false,
+        "mediapipeFaceProximity": false,
+        "mediapipeTestMode": false,
+        "interactionProfile": "expressive",
+        "actionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 1500
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": false,
+            "target": "shader",
+            "sensitivity": "medium",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": false,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "customActionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 1500
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": false,
+            "target": "shader",
+            "sensitivity": "medium",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": false,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "touchMediaControls": {
+          "enabled": false,
+          "desktopFallback": "auto",
+          "resetGesture": "double-tap",
+          "baseline": {
+            "translateX": 0,
+            "translateY": 0,
+            "scale": 1,
+            "rotationDegrees": 0
+          }
+        }
+      },
+      "interaction": {
+        "supportsProximity": false,
+        "supportsAmbientLight": false,
+        "events": []
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "still",
+            "colorTemperatureShift": 0,
+            "noiseIntensity": 0,
+            "brightnessShift": 0
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 0,
+        "breathingEnabled": false,
+        "parallaxEnabled": false,
+        "colorShiftEnabled": false
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0,
+          "breathingIntensity": 0,
+          "textureDrift": 0
+        }
+      },
+      "mood": 0
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "sampleinteractive-glsl",
+        "activeShaderKey": "sampleinteractive-glsl",
+        "userShaderPatched": "// sampleInteractive.glsl\n// Premium interactive shader with glow, chroma, and audio-reactive ripples.\nprecision mediump float;\nuniform float iTime;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform sampler2D uStateA;\nuniform sampler2D uStateB;\nuniform sampler2D uStateC;\nuniform sampler2D uStateD;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 iDate;\nuniform float uCameraLevel;\n\nuniform vec2 uResolution;\nuniform float uTime;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\nuniform sampler2D uMainImage; // artwork / uMainImage\n\nvec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }\nvec4 tex2D(sampler2D s, vec3 uv) { return texture2D(s, uv.xy); }\nvec4 tex2D(sampler2D s, vec4 uv) { return texture2D(s, uv.xy); }\n\nfloat artex_hash(vec2 p) {\n  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);\n}\n\nfloat artex_noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = artex_hash(i);\n  float b = artex_hash(i + vec2(1.0, 0.0));\n  float c = artex_hash(i + vec2(0.0, 1.0));\n  float d = artex_hash(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec2 artex_applyFlow(vec2 uv) {\n  if (uFlowEnabled != 1) return uv;\n  vec2 p = uv * uFlowScale;\n  float nx = artex_noise(p + vec2(10.0, 0.0) + uTime * uFlowSpeed);\n  float ny = artex_noise(p + vec2(0.0, 10.0) + uTime * uFlowSpeed);\n  vec2 distortion = vec2(\n    (nx - 0.5) * uFlowIntensity * 0.15,\n    (ny - 0.5) * uFlowIntensity * 0.15\n  );\n  return uv + distortion;\n}\n\nvec4 artex_blendStates(vec2 uv) {\n  if (uUseStateBlending != 1) {\n    return tex2D(uMainImage, uv);\n  }\n\n  if (uStateCount <= 1) {\n    return tex2D(uStateA, uv);\n  } else if (uStateCount == 2) {\n    vec4 stateA = tex2D(uStateA, uv);\n    vec4 stateB = tex2D(uStateB, uv);\n    return mix(stateA, stateB, uBlendFactor);\n  } else if (uStateCount == 3) {\n    if (uBlendFactor < 0.5) {\n      float t = uBlendFactor * 2.0;\n      vec4 stateA = tex2D(uStateA, uv);\n      vec4 stateB = tex2D(uStateB, uv);\n      return mix(stateA, stateB, t);\n    } else {\n      float t = (uBlendFactor - 0.5) * 2.0;\n      vec4 stateB = tex2D(uStateB, uv);\n      vec4 stateC = tex2D(uStateC, uv);\n      return mix(stateB, stateC, t);\n    }\n  } else if (uStateCount >= 4) {\n    float third = 1.0 / 3.0;\n    float twoThirds = 2.0 / 3.0;\n    if (uBlendFactor < third) {\n      float t = uBlendFactor * 3.0;\n      vec4 stateA = tex2D(uStateA, uv);\n      vec4 stateB = tex2D(uStateB, uv);\n      return mix(stateA, stateB, t);\n    } else if (uBlendFactor < twoThirds) {\n      float t = (uBlendFactor - third) * 3.0;\n      vec4 stateB = tex2D(uStateB, uv);\n      vec4 stateC = tex2D(uStateC, uv);\n      return mix(stateB, stateC, t);\n    } else {\n      float t = (uBlendFactor - twoThirds) * 3.0;\n      vec4 stateC = tex2D(uStateC, uv);\n      vec4 stateD = tex2D(uStateD, uv);\n      return mix(stateC, stateD, t);\n    }\n  }\n\n  return tex2D(uMainImage, uv);\n}\n\nvec4 artex_sampleMain(vec2 uv) {\n  vec2 flowUv = artex_applyFlow(uv);\n  return artex_blendStates(flowUv);\n}\n\nvec4 artex_sampleMain(float uv) {\n  return artex_sampleMain(vec2(uv));\n}\n\nvec4 artex_sampleMain(vec3 uv) {\n  return artex_sampleMain(uv.xy);\n}\n\nvec4 artex_sampleMain(vec4 uv) {\n  return artex_sampleMain(uv.xy);\n}\n\nfloat hash(vec2 p) {\n  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);\n}\n\nfloat noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = hash(i);\n  float b = hash(i + vec2(1.0, 0.0));\n  float c = hash(i + vec2(0.0, 1.0));\n  float d = hash(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec3 grade(vec3 c) {\n  c = pow(c, vec3(0.95));\n  c = c * 1.05 + vec3(0.01, 0.0, -0.01);\n  return clamp(c, 0.0, 1.0);\n}\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / uResolution.xy;\n  vec2 p = uv * 2.0 - 1.0;\n  p.x *= uResolution.x / uResolution.y;\n\n  float beat = smoothstep(0.05, 0.9, uBassLevel);\n  float pulse = (0.02 + 0.08 * beat) * (0.6 + 0.6 * uEffectParam1);\n  float r = length(p);\n  float ripple = sin(r * 14.0 - uTime * 4.0 + noise(p * 4.0 + uTime * 0.3) * 2.0) * 0.5 + 0.5;\n  vec2 offset = p * ripple * pulse;\n\n  vec3 base = artex_sampleMain( uv + offset).rgb;\n\n  // Subtle chromatic aberration\n  vec2 chroma = p * (0.001 + 0.003 * beat) * (0.4 + 0.6 * uEffectParam2);\n  vec3 col;\n  col.r = artex_sampleMain( uv + offset + chroma).r;\n  col.g = base.g;\n  col.b = artex_sampleMain( uv + offset - chroma).b;\n\n  // Neon glow\n  float glow = smoothstep(1.1, 0.0, r);\n  vec3 neon = vec3(0.2, 0.65, 1.0);\n  col += neon * glow * (0.25 + 0.75 * uAudioLevel) * (0.5 + 0.8 * uEffectParam3);\n\n  // Vignette and proximity warmth\n  float vignette = smoothstep(1.1, 0.4, r);\n  vec3 warmth = vec3(0.08, 0.03, -0.02) * (0.3 + uProximity);\n  col = col * vignette + warmth;\n\n  col = grade(col);\n  col = mix(base, col, uEffectStrength);\n\n  gl_FragColor = vec4(col, 1.0);\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "sampleInteractive.glsl",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "normal",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 1,
+        "shaderParams": {
+          "param1": 1,
+          "param2": 1,
+          "param3": 1
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": true,
+        "cameraPreviewVisible": true,
+        "cameraPreviewMirrored": false,
+        "timeScale": 0.6
+      }
+    }
+  }
+}

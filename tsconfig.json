@@ -1,10 +1,24 @@
 {
   "files": [],
   "references": [
+    { "path": "./apps/creator/tsconfig.json" },
+    { "path": "./apps/runtime/tsconfig.json" },
+    { "path": "./apps/display/tsconfig.main.json" },
+    { "path": "./apps/studio-desktop/tsconfig.main.json" },
     { "path": "./packages/artex-contract/tsconfig.json" },
+    { "path": "./packages/artex-core/tsconfig.json" },
+    { "path": "./packages/artex-render-core/tsconfig.json" },
     { "path": "./packages/artex-shaders/tsconfig.json" },
     { "path": "./packages/artex-extensions/tsconfig.json" },
     { "path": "./packages/artex-experiments/tsconfig.json" },
-    { "path": "./packages/artex-shader-tools/tsconfig.json" }
+    { "path": "./packages/artex-presets/tsconfig.json" },
+    { "path": "./packages/artex-exporter/tsconfig.json" },
+    { "path": "./packages/artex-pointcloud/tsconfig.json" },
+    { "path": "./packages/artex-runtime-web/tsconfig.json" },
+    { "path": "./packages/artex-world-signals/tsconfig.json" },
+    { "path": "./packages/artex-sensing-audio/tsconfig.json" },
+    { "path": "./packages/artex-sensing-camera/tsconfig.json" },
+    { "path": "./packages/artex-sensing-mediapipe/tsconfig.json" },
+    { "path": "./packages/artex-sensing-midi/tsconfig.json" }
   ]
 }

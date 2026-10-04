@@ -30,6 +30,11 @@ export type ProjectReferenceEffectClass =
 export type ProjectReferenceRendererMode = "shader-2d" | "compositor-2d" | "particles-2d" | "scene-3d";
 export type ProjectReferencePreviewFidelity = "native" | "fallback";
 
+export type ProjectCustomUniformValue =
+  | { type: "float"; value: number }
+  | { type: "vec2"; value: [number, number] }
+  | { type: "vec3"; value: [number, number, number] };
+
 export interface ProjectShaderState {
   builtinShaderId: string | null;
   activeShaderKey?: string | null;
@@ -56,13 +61,16 @@ export interface ProjectShaderState {
   shaderInteractionMode: ProjectShaderInteractionMode;
   shaderInteractionPreset: ProjectShaderInteractionPreset;
   shaderDialect?: ProjectShaderDialect;
+  customUniforms?: Record<string, ProjectCustomUniformValue>;
 }
 
 export interface ProjectRuntimeState {
   useCameraAsArtwork?: boolean;
   artworkImageEnabled?: boolean;
   cameraPreviewVisible?: boolean;
+  showWebcamPreview?: boolean;
   cameraPreviewMirrored?: boolean;
+  showTestWindows?: boolean;
   timeScale?: number;
 }
 

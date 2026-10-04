@@ -1,0 +1,231 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.323Z via scripts/extract_v1_fixtures.mjs from production piece id=a9e8fa25-ff2c-467e-b6fd-b82a435770d0 (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "adrift-in-time",
+  "sourcePieceId": "a9e8fa25-ff2c-467e-b6fd-b82a435770d0",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "Adrift in Time",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "dream",
+      "shader_modules": [
+        {
+          "id": "flow-distortion",
+          "params": {
+            "intensity": 0.176,
+            "speed": 0.722,
+            "scale": 4.524
+          }
+        },
+        {
+          "id": "color-evolution",
+          "params": {
+            "speed": 0.28559999999999997,
+            "intensity": 0.5628
+          }
+        },
+        {
+          "id": "feedback",
+          "params": {
+            "intensity": 0.3694,
+            "decay": 0.8388
+          }
+        }
+      ],
+      "advancedShaderModules": [
+        {
+          "id": "flow-distortion",
+          "params": {
+            "intensity": 0.176,
+            "speed": 0.722,
+            "scale": 4.5
+          }
+        },
+        {
+          "id": "color-evolution",
+          "params": {
+            "speed": 0.31,
+            "intensity": 0.5
+          }
+        },
+        {
+          "id": "feedback",
+          "params": {
+            "intensity": 0.3694,
+            "decay": 0.8388
+          }
+        }
+      ],
+      "shader": {
+        "flowIntensity": 0.18336,
+        "flowSpeed": 0.8492,
+        "flowScale": 5.5108
+      },
+      "interactions": {
+        "audioReactive": true,
+        "proximitySensor": true,
+        "cameraReactive": true,
+        "gestureLab": true,
+        "supportsProximity": true,
+        "audioReactiveIntensity": 0.73,
+        "audioReactiveGain": 0.31,
+        "simpleInteractionsEnabled": true,
+        "simpleInteractionMode": "performance",
+        "interactionProfile": "performance",
+        "actionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": true,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": true,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1200
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": true,
+            "target": "shader",
+            "sensitivity": "high",
+            "cooldownMs": 1100
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": true,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": true,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 0
+          }
+        ],
+        "mediapipeFaceProximity": true,
+        "interactionLabTarget": "both",
+        "interactionSafeMode": false,
+        "touchMediaControls": {
+          "enabled": true,
+          "desktopFallback": "auto",
+          "resetGesture": "double-tap",
+          "baseline": {
+            "translateX": 0,
+            "translateY": 0,
+            "scale": 1,
+            "rotationDegrees": 0
+          }
+        }
+      },
+      "interaction": {
+        "supportsProximity": true,
+        "supportsAmbientLight": false,
+        "events": [
+          {
+            "trigger": "viewer_close",
+            "effect": "increase_breathing",
+            "intensityDelta": 0.24,
+            "cooldownSeconds": 45
+          }
+        ]
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "float",
+            "colorTemperatureShift": -0.015600000000000003,
+            "noiseIntensity": 0.118,
+            "brightnessShift": 0.004799999999999999
+          },
+          {
+            "startDay": 28,
+            "label": "glow",
+            "colorTemperatureShift": 0.1444,
+            "noiseIntensity": 0.2444,
+            "brightnessShift": 0.050600000000000006
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 1.19592,
+        "breathingEnabled": true,
+        "parallaxEnabled": true,
+        "colorShiftEnabled": true
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0.36428000000000005,
+          "breathingIntensity": 0.2834,
+          "textureDrift": 0.18732000000000004
+        }
+      },
+      "mood": 0.58
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "kesson-voyage",
+        "activeShaderKey": "kesson-voyage",
+        "userShaderPatched": "// Kesson Voyage ARTEX — Gyroid tunnel artwork warper\n// Rewritten for ARTEX compositing with reduced ray march steps.\nprecision mediump float;\nuniform float time;\nuniform float uTargetAspect;\nuniform float targetAspect;\nuniform vec2 uMainImageResolution;\nuniform vec2 uStateAResolution;\nuniform vec2 uStateBResolution;\nuniform vec2 uStateCResolution;\nuniform vec2 uStateDResolution;\nuniform vec4 uMediaTransform;\nuniform vec4 u_mediaTransform;\nuniform int uMediaTransformMainEnabled;\nuniform vec4 iMouse;\nuniform vec2 uLeftEye;\nuniform vec2 uRightEye;\nuniform vec2 uFaceCenter;\nuniform float uHasFace;\nuniform vec2 leftEye;\nuniform vec2 rightEye;\nuniform vec2 faceCenter;\nuniform float hasFace;\nuniform float uTime;\nuniform float iTime;\nuniform vec2 uResolution;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform sampler2D uMainImage;\nuniform sampler2D uStateA;\nuniform sampler2D uStateB;\nuniform sampler2D uStateC;\nuniform sampler2D uStateD;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 iDate;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\n// --- ARTEX helpers ---\nvec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }\n\nfloat artex_hash(vec2 p) {\n  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);\n}\n\nfloat artex_noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = artex_hash(i);\n  float b = artex_hash(i + vec2(1.0, 0.0));\n  float c = artex_hash(i + vec2(0.0, 1.0));\n  float d = artex_hash(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec2 artex_applyFlow(vec2 uv) {\n  if (uFlowEnabled != 1) return uv;\n  vec2 p = uv * uFlowScale;\n  float nx = artex_noise(p + vec2(10.0, 0.0) + uTime * uFlowSpeed);\n  float ny = artex_noise(p + vec2(0.0, 10.0) + uTime * uFlowSpeed);\n  return uv + vec2((nx - 0.5), (ny - 0.5)) * uFlowIntensity * 0.15;\n}\n\nvec4 artex_blendStates(vec2 uv) {\n  if (uUseStateBlending != 1) return tex2D(uMainImage, uv);\n  if (uStateCount <= 1) return tex2D(uStateA, uv);\n  if (uStateCount == 2) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor);\n  if (uStateCount == 3) {\n    if (uBlendFactor < 0.5) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 2.0);\n    return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - 0.5) * 2.0);\n  }\n  float t3 = 1.0 / 3.0;\n  if (uBlendFactor < t3) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 3.0);\n  if (uBlendFactor < t3 * 2.0) return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - t3) * 3.0);\n  return mix(tex2D(uStateC, uv), tex2D(uStateD, uv), (uBlendFactor - t3 * 2.0) * 3.0);\n}\n\nvec4 artex_sampleMain(vec2 uv) {\n  return artex_blendStates(artex_applyFlow(uv));\n}\n\n// --- Gyroid tunnel ---\n#define SPEED 0.25\n#define ROTSPEED 0.15\n#define CAMDIST 4.0\n\nmat2 rot(float a) {\n  float s = sin(a), c = cos(a);\n  return mat2(c, -s, s, c);\n}\n\nfloat repeat(float p, float s) {\n  return (fract(p / s - 0.5) - 0.5) * s;\n}\n\nvec3 tunnel(vec3 p) {\n  float dd = p.z * 0.005 * 20.1 + uTime * 0.25;\n  return vec3(sin(dd) * 6.0, sin(dd * 0.7) * 6.0, 0.0);\n}\n\nvec3 navigate(vec3 p) {\n  p += tunnel(p);\n  p.xy *= rot((p.z + uTime) * ROTSPEED);\n  p.y -= 0.3;\n  return p;\n}\n\nfloat sdGyroid(vec3 p, float scale, float thickness, float bias, float lx, float ly) {\n  vec3 p2 = p * scale;\n  p2.z = sin(p2.z) + 10.0;\n  float ls = max(lx, ly);\n  return abs(dot(sin(p2 * lx), cos(p2.zxy * ly)) - bias) / (scale * ls) - thickness;\n}\n\nfloat smin(float a, float b, float h) {\n  float k = clamp((a - b) / h * 0.5 + 0.5, 0.0, 1.0);\n  return mix(a, b, k) - k * (1.0 - k) * h;\n}\n\nfloat sdTriPrism(vec3 p, vec2 h) {\n  vec3 q = abs(p);\n  return max(q.z - h.y, max(q.x * 0.866025 + p.y * 0.5, -p.y) - h.x * 0.5);\n}\n\nfloat beamAccum = 0.0;\n\nfloat getDist(vec3 p) {\n  vec3 pc = p;\n  p.z += uTime * SPEED;\n  p -= tunnel(p);\n  vec3 p2 = navigate(p - tunnel(p));\n  vec3 pg = p2;\n  pg.xy *= rot(pg.z * 0.0001);\n\n  float lz = fract((p.z / 100.0) * 0.02);\n  float t = uTime;\n  float lx = 6.0 + (sin((lz + t) * 0.2576) * 0.5 + 0.5);\n  float ly = 5.0 + (cos((lz + t) * 0.1987) * 0.5 + 0.5);\n  float g1 = sdGyroid(pg, 0.5, 0.1, 1.4, lx, ly) * 0.8;\n\n  // Reduced from 8 to 4 detail octaves\n  float v = 10.63748;\n  float m = 0.5;\n  for (int i = 0; i < 4; i++) {\n    g1 -= sdGyroid(p2, v, 0.03, 0.3, 1.0, 1.0) * m;\n    v *= 2.0;\n    m *= 0.85;\n  }\n\n  float camera = length(pc - vec3(0.0, 0.0, -CAMDIST)) - 0.2;\n  g1 = max(g1, -camera);\n\n  vec3 ps = p;\n  ps += tunnel(ps);\n  ps.z = repeat(ps.z, 30.0);\n  ps.xy *= rot(ps.z * 0.1);\n  float c11 = sdTriPrism(ps, vec2(1.0, 15.0));\n  float c12 = sdTriPrism(ps, vec2(0.9, 30.0));\n  float cc1 = max(c11, -c12);\n\n  float d1 = smin(g1, cc1, 0.2);\n  d1 = min(d1, cc1);\n  beamAccum += 0.01 / (0.08 + cc1);\n  return d1;\n}\n\nvoid main() {\n  vec2 baseUv = gl_FragCoord.xy / uResolution.xy;\n\n  // Always sample artwork at its true UV — never alter the artwork's scale\n  vec4 artwork = artex_sampleMain(baseUv);\n\n  float strength = clamp(uEffectStrength, 0.0, 1.0);\n  if (strength < 0.001) {\n    gl_FragColor = artwork;\n    return;\n  }\n\n  // Compute tunnel geometry for overlay effect\n  vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy) / uResolution.y;\n  float t = uTime * 0.01;\n  uv += sin(uv * 20.0 + t) * 0.01;\n\n  vec3 ro = vec3(0.0, 0.0, -CAMDIST);\n  ro += vec3(\n    sin(sin(ro.x) + cos(ro.y + uTime) + uTime * 0.178),\n    cos(cos(ro.z) + sin(ro.x + uTime) + uTime * 0.785),\n    sin(sin(ro.y) + cos(ro.z + uTime) + uTime * 0.355)\n  ) * 0.1;\n\n  vec3 ta = vec3(0.0);\n  ta += vec3(\n    sin(sin(ta.y) + cos(ta.z + uTime) + uTime * 0.533),\n    cos(cos(ta.x) + sin(ta.y + uTime) + uTime * 0.365),\n    sin(sin(ta.x) + cos(ta.y + uTime) + uTime * 0.563)\n  ) * 0.1;\n\n  vec3 ww = normalize(ta - ro);\n  vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));\n  vec3 vv = normalize(cross(uu, ww));\n  vec3 rd = normalize(uv.x * uu + uv.y * vv + ww);\n\n  // Reduced from 150 to 48 steps\n  float dO = 0.00001;\n  for (int i = 0; i < 48; i++) {\n    vec3 p = ro + rd * dO;\n    float dS = getDist(p);\n    dO += dS;\n    if (dO > 20.0 || dS < 0.00001) break;\n  }\n\n  float depthNorm = clamp(dO / 20.0, 0.0, 1.0);\n\n  // Tunnel beam glow — boosted for visibility\n  vec3 tunnelColor = vec3(0.1, 0.72, 1.0);\n  float beamGlow = beamAccum * (0.4 + uAudioLevel * 3.0);\n  vec3 glowEffect = tunnelColor * beamGlow * 0.6;\n  glowEffect = 1.0 - exp(-glowEffect);\n\n  // Depth-based ambient: closer = brighter structure\n  float depthAmbient = 1.0 - depthNorm * 0.5;\n\n  // Standalone tunnel visual (visible when no media is loaded)\n  float mediaPresence = smoothstep(0.0, 0.05, artwork.a);\n  vec3 standalone = vec3(0.05, 0.08, 0.15) * depthAmbient;\n  standalone += tunnelColor * (1.0 - depthNorm) * 0.15;\n  vec3 standaloneGlow = glowEffect + glowEffect * tunnelColor * 0.8;\n  standalone += standaloneGlow * strength;\n\n  // Composite: overlay tunnel structure onto artwork\n  vec3 withMedia = artwork.rgb;\n  withMedia *= mix(vec3(1.0), vec3(0.75), depthNorm * strength * 0.4);\n  vec3 tintedGlow = mix(glowEffect, artwork.rgb * glowEffect * 2.5, 0.4);\n  withMedia += tintedGlow * strength * 1.5;\n\n  vec3 col = mix(standalone, withMedia, mediaPresence);\n\n  gl_FragColor = vec4(col, max(artwork.a, strength * (1.0 - mediaPresence)));\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "Kesson_Voyage.frag",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "normal",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 1,
+        "shaderParams": {
+          "param1": 1,
+          "param2": 1,
+          "param3": 1
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": true,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 0.11
+      }
+    }
+  }
+}

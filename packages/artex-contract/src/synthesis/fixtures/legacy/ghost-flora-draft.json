@@ -1,0 +1,154 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.321Z via scripts/extract_v1_fixtures.mjs from production piece id=36dfa5ff-232e-42f3-a1d6-5f535849339b (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "ghost-flora-draft",
+  "sourcePieceId": "36dfa5ff-232e-42f3-a1d6-5f535849339b",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "Ghost Flora Draft",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "dream",
+      "shader_modules": [
+        {
+          "id": "flow-distortion",
+          "params": {
+            "intensity": 0.15200000000000002,
+            "speed": 0.6140000000000001,
+            "scale": 4.788
+          }
+        },
+        {
+          "id": "color-evolution",
+          "params": {
+            "speed": 0.2472,
+            "intensity": 0.4836
+          }
+        },
+        {
+          "id": "feedback",
+          "params": {
+            "intensity": 0.3178,
+            "decay": 0.8556
+          }
+        }
+      ],
+      "advancedShaderModules": [],
+      "shader": {
+        "flowIntensity": 0.16032000000000002,
+        "flowSpeed": 0.7303999999999999,
+        "flowScale": 5.1796
+      },
+      "interactions": {
+        "audioReactive": true,
+        "proximitySensor": true,
+        "cameraReactive": true,
+        "gestureLab": false,
+        "supportsProximity": true,
+        "interactionHud": true,
+        "interactionLabTarget": "both"
+      },
+      "interaction": {
+        "supportsProximity": true,
+        "supportsAmbientLight": false,
+        "events": [
+          {
+            "trigger": "viewer_close",
+            "effect": "increase_breathing",
+            "intensityDelta": 0.24,
+            "cooldownSeconds": 45
+          }
+        ]
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "float",
+            "colorTemperatureShift": -0.0372,
+            "noiseIntensity": 0.10600000000000001,
+            "brightnessShift": -0.0023999999999999994
+          },
+          {
+            "startDay": 26,
+            "label": "glow",
+            "colorTemperatureShift": 0.12279999999999999,
+            "noiseIntensity": 0.2228,
+            "brightnessShift": 0.04220000000000001
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 1.08504,
+        "breathingEnabled": true,
+        "parallaxEnabled": true,
+        "colorShiftEnabled": true
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0.33236000000000004,
+          "breathingIntensity": 0.2558,
+          "textureDrift": 0.16884000000000005
+        }
+      },
+      "mood": 0.46
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "ghost-flora-column-artex",
+        "activeShaderKey": "ghost-flora-column-artex",
+        "userShaderPatched": "// Ghost Flora Column ARTEX.glsl\n// Reference: forside_art_...3830519455873633713\nprecision mediump float;\nuniform float time;\nuniform float iTime;\nuniform float uTargetAspect;\nuniform float targetAspect;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform sampler2D uMainImage;\nuniform vec2 uMainImageResolution;\nuniform sampler2D uStateA;\nuniform vec2 uStateAResolution;\nuniform sampler2D uStateB;\nuniform vec2 uStateBResolution;\nuniform sampler2D uStateC;\nuniform vec2 uStateCResolution;\nuniform sampler2D uStateD;\nuniform vec2 uStateDResolution;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 uMediaTransform;\nuniform vec4 u_mediaTransform;\nuniform int uMediaTransformMainEnabled;\nuniform vec4 iDate;\nuniform vec4 iMouse;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform vec2 uLeftEye;\nuniform vec2 uRightEye;\nuniform vec2 uFaceCenter;\nuniform float uHasFace;\nuniform vec2 leftEye;\nuniform vec2 rightEye;\nuniform vec2 faceCenter;\nuniform float hasFace;\n\nuniform float uTime;\nuniform vec2 uResolution;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\n\nfloat hash11(float p) {\n  return fract(sin(p * 91.73 + 17.31) * 43758.5453123);\n}\n\nvec2 hash21(float p) {\n  return fract(sin(vec2(p * 127.1 + 311.7, p * 269.5 + 183.3)) * 43758.5453123);\n}\n\nvoid addInk(inout vec3 color, vec3 ink, float a) {\n  float alpha = sat(a);\n  color = mix(color, ink, alpha * 0.22);\n  color += ink * alpha * 0.34;\n}\n\nfloat stemAlpha(vec2 p, float x, float y0, float y1, float bend, float seed) {\n  float span = max(y1 - y0, 0.001);\n  float t = sat((p.y - y0) / span);\n  float curve = bend * sin(t * 3.14159 + seed * 3.2) * (0.4 + 0.6 * t);\n  float sx = mix(x, x + bend, t) + curve;\n  float w = mix(0.002, 0.008, t);\n  float d = abs(p.x - sx);\n  float line = smoothstep(w * 3.0, w, d);\n  float mask = smoothstep(y0 - 0.02, y0 + 0.03, p.y) * (1.0 - smoothstep(y1 + 0.01, y1 + 0.06, p.y));\n  return line * mask;\n}\n\nvec4 wireDisk(vec2 p, vec2 c, vec2 r, float seed, float time) {\n  vec2 q = p - c;\n  q.x += 0.03 * r.x * sin(time * 0.35 + seed * 2.7 + q.y * 10.0);\n  vec2 e = q / max(r, vec2(0.001));\n  float d = length(e);\n  float body = smoothstep(1.02, 0.90, d);\n  float meshA = pow(abs(sin(e.x * 44.0 + seed * 5.0 + time * 0.18)), 12.0);\n  float meshB = pow(abs(sin(e.y * 32.0 - seed * 4.0 - time * 0.15)), 12.0);\n  float rim = exp(-pow((d - 1.0) / 0.055, 2.0));\n  float alpha = body * (0.05 + 0.22 * mix(meshA, meshB, 0.45)) + rim * 0.08;\n  vec3 col = mix(vec3(0.50, 0.61, 0.98), vec3(0.88, 0.84, 1.0), hash11(seed * 8.1));\n  return vec4(col, sat(alpha));\n}\n\nvec4 fuzzyBloom(vec2 p, vec2 c, float r, float seed, float time) {\n  vec2 q = p - c;\n  float rr = length(q);\n  float a = atan(q.y, q.x);\n  float core = exp(-pow(rr / max(r, 0.001), 2.2) * 2.0);\n  float shell = exp(-pow((rr - r) / (r * 0.19 + 0.002), 2.0));\n  float spikes = pow(abs(sin(a * 52.0 + time * 0.45 + seed * 7.0)), 24.0);\n  float alpha = core * 0.22 + shell * (0.10 + 0.80 * spikes);\n  vec3 col = mix(vec3(0.95, 0.88, 1.0), vec3(0.56, 0.58, 1.0), sat(rr / max(r, 0.001)));\n  col += vec3(1.0, 0.55, 0.62) * shell * spikes * 0.32;\n  return vec4(col, sat(alpha));\n}\n\nvec4 coralColumn(vec2 p, vec2 c, vec2 size, float seed, float time) {\n  vec2 q = p - c;\n  q.y += size.y * 0.45;\n  float y = q.y / max(size.y, 0.001);\n  float halfW = mix(0.10, 0.44, sat(y));\n  float xNorm = abs(q.x / max(size.x, 0.001));\n  float side = 1.0 - smoothstep(halfW - 0.03, halfW + 0.06, xNorm);\n  float bodyMask = smoothstep(-0.2, 0.03, y) * (1.0 - smoothstep(1.12, 1.32, y));\n\n  float phase = (q.x / max(size.x * halfW, 0.002)) * 56.0 + y * 4.5 + seed * 8.0 + time * 0.18;\n  float filaments = pow(abs(sin(phase)), 19.0);\n  float tips = smoothstep(0.94, 1.10, y) * pow(abs(sin(q.x * 180.0 + seed * 19.0)), 18.0);\n\n  float alpha = bodyMask * side * (0.20 + 0.68 * filaments) + side * tips * 0.35;\n  vec3 col = mix(vec3(0.86, 0.29, 0.41), vec3(1.0, 0.63, 0.70), sat(y * 0.75 + 0.2));\n  return vec4(col, sat(alpha));\n}\n\nvoid main() {\n  vec2 res = max(uResolution, vec2(1.0));\n  vec2 uv = gl_FragCoord.xy / res;\n  vec2 p = uv * 2.0 - 1.0;\n  p.x *= res.x / res.y;\n\n  float time = uTime * (0.45 + 0.75 * sat(uEffectParam2 * 0.55));\n  float density = 0.75 + 0.40 * sat(uEffectParam1 * 0.6);\n  float accent = sat(uEffectParam3 * 0.5);\n\n  vec3 bg = mix(vec3(0.002, 0.006, 0.035), vec3(0.008, 0.020, 0.078), 0.35 + 0.5 * sat((p.y + 1.0) * 0.5));\n  vec3 color = bg;\n\n  const int DISKS = 18;\n  for (int i = 0; i < DISKS; i++) {\n    float seed = float(i) + 21.0;\n    float x = mix(-1.3, 1.2, hash11(seed * 2.1));\n    float y = mix(-0.7, 0.8, hash11(seed * 3.7));\n    vec2 c = vec2(x + 0.08 * sin(time * 0.22 + seed), y);\n    vec2 r = vec2(mix(0.14, 0.48, hash11(seed * 4.3)), mix(0.06, 0.24, hash11(seed * 5.9)));\n    vec4 d = wireDisk(p, c, r, seed, time);\n    addInk(color, d.rgb, d.a * (0.3 + 0.5 * hash11(seed * 1.8)));\n  }\n\n  const int STEMS = 15;\n  for (int i = 0; i < STEMS; i++) {\n    float seed = float(i) + 77.0;\n    float x = mix(-1.25, 1.1, hash11(seed * 1.9));\n    float y0 = -1.1 - 0.08 * hash11(seed * 4.1);\n    float y1 = mix(-0.05, 0.88, hash11(seed * 3.2)) * density;\n    float bend = mix(-0.16, 0.16, hash11(seed * 6.4));\n    float a = stemAlpha(p, x, y0, y1, bend, seed + time * 0.3);\n    vec3 stemCol = mix(vec3(0.25, 0.34, 0.60), vec3(0.65, 0.78, 1.0), hash11(seed * 7.1));\n    addInk(color, stemCol, a * 0.48);\n  }\n\n  vec4 bloom = fuzzyBloom(p, vec2(-0.44, 0.25), 0.16, 1.0, time);\n  addInk(color, bloom.rgb, bloom.a * 1.1);\n\n  vec4 column = coralColumn(p, vec2(0.58, 0.02), vec2(0.18, 0.56), 2.0, time);\n  addInk(color, column.rgb, column.a * (0.85 + 0.5 * accent));\n\n  const int BUDS = 6;\n  for (int i = 0; i < BUDS; i++) {\n    float seed = float(i) + 140.0;\n    vec2 c = vec2(mix(-0.95, 0.45, hash11(seed * 2.7)), mix(-0.55, 0.78, hash11(seed * 5.2)));\n    vec2 q = (p - c) / vec2(0.08, 0.055);\n    float d = length(q);\n    float a = 1.0 - smoothstep(0.82, 1.0, d);\n    vec3 budCol = mix(vec3(0.76, 0.72, 1.0), vec3(1.0, 0.62, 0.52), hash11(seed * 8.8));\n    addInk(color, budCol, a * 0.22 * density);\n  }\n\n  color = 1.0 - exp(-color * (1.15 + accent * 0.4));\n  color = pow(color, vec3(0.95));\n\n  vec3 finalColor = mix(bg, color, sat(uEffectStrength));\n  gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "Ghost Flora Column ARTEX.glsl",
+        "shaderMix": 1,
+        "shaderBlendMode": "screen",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 2,
+        "shaderParams": {
+          "param1": 0.92,
+          "param2": 0.7,
+          "param3": 1.15
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": false,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 1
+      }
+    }
+  }
+}

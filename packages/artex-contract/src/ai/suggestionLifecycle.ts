@@ -6,6 +6,7 @@ import type {
   ConfigJson,
   InteractionProfile,
 } from "../types";
+import { normalizeSuggestionAttribution } from "./suggestionAttribution";
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === "object" && value !== null
@@ -33,6 +34,20 @@ const normalizeSuggestionPatch = (value: unknown): ArtexSuggestionPatch => {
     ...(isInteractionProfile(candidate.interactionProfile)
       ? { interactionProfile: candidate.interactionProfile }
       : {}),
+    ...(isRecord(candidate.shader)
+      && candidate.shader.source === "builtin_library"
+      && typeof candidate.shader.builtinShaderId === "string"
+      && candidate.shader.builtinShaderId.trim().length > 0
+      ? {
+        shader: {
+          source: "builtin_library",
+          builtinShaderId: candidate.shader.builtinShaderId,
+          ...(typeof candidate.shader.shaderLabel === "string" && candidate.shader.shaderLabel.trim().length > 0
+            ? { shaderLabel: candidate.shader.shaderLabel }
+            : {}),
+        },
+      }
+      : {}),
   };
 };
 
@@ -50,6 +65,7 @@ export const normalizeArtworkSuggestionState = (value: unknown): ArtworkSuggesti
   const currentSetupOrigin = candidate.currentSetupOrigin === "ai"
     || candidate.currentSetupOrigin === "ai_edited"
     || candidate.currentSetupOrigin === "regenerated"
+    || candidate.currentSetupOrigin === "randomized"
     ? candidate.currentSetupOrigin
     : "manual";
 
@@ -82,6 +98,8 @@ export const normalizeArtexSuggestion = (value: unknown): ArtexSuggestion | null
     return null;
   }
 
+  const attribution = normalizeSuggestionAttribution(value.attribution);
+
   return {
     id: value.id,
     createdAt: value.createdAt,
@@ -90,6 +108,7 @@ export const normalizeArtexSuggestion = (value: unknown): ArtexSuggestion | null
     summary: value.summary,
     ...(typeof value.rationale === "string" ? { rationale: value.rationale } : {}),
     ...(typeof value.inputSignature === "string" ? { inputSignature: value.inputSignature } : {}),
+    ...(attribution ? { attribution } : {}),
     patch: normalizeSuggestionPatch(value.patch),
   };
 };
@@ -99,7 +118,7 @@ export const normalizeArtexSuggestionSnapshot = (value: unknown): ArtexSuggestio
   if (
     typeof value.id !== "string"
     || typeof value.createdAt !== "string"
-    || (value.origin !== "manual" && value.origin !== "ai" && value.origin !== "ai_edited" && value.origin !== "regenerated")
+    || (value.origin !== "manual" && value.origin !== "ai" && value.origin !== "ai_edited" && value.origin !== "regenerated" && value.origin !== "randomized")
   ) {
     return null;
   }
@@ -137,12 +156,13 @@ export const createSuggestionSnapshot = (
 export const markSuggestionAccepted = (
   previousState: ArtworkSuggestionState,
   suggestion: ArtexSuggestion,
+  originOverride?: ArtworkSuggestionState["currentSetupOrigin"],
 ): ArtworkSuggestionState => ({
   suggestionAvailable: true,
   suggestionStale: false,
   suggestionSource: suggestion.suggestionSource,
   provider: suggestion.provider,
-  currentSetupOrigin: previousState.lastAcceptedSuggestionId ? "regenerated" : "ai",
+  currentSetupOrigin: originOverride ?? (previousState.lastAcceptedSuggestionId ? "regenerated" : "ai"),
   lastAcceptedSuggestionId: suggestion.id,
   snapshotCount: previousState.snapshotCount,
 });

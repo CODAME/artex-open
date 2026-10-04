@@ -1,6 +1,7 @@
 // Primitive Intelligence Study ARTEX.glsl
 // Black-field synthetic face study with mic-reactive iris, ring shell, and sparse telemetry dust.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float iTime;
 uniform float uTargetAspect;

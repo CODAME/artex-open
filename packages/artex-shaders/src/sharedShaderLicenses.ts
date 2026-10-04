@@ -1,44 +1,27 @@
-export type SharedShaderLicenseId = "mit" | "apache-2.0" | "bsd-3-clause" | "cc0-1.0";
+/**
+ * Shader-flavoured spelling of the shared reuse-license registry.
+ *
+ * The definitions moved to `./reuseLicenses` when catalog templates gained an
+ * author and a license and needed the same four options: one list, two names,
+ * no second copy to drift. Every name below is an alias of its neutral
+ * counterpart, kept because the `./shared-licenses` export path and its
+ * importers (the creator's `data/sharedShaderLicenses.ts`, the shader import
+ * dialog, `SharedShaderRecord.licenseId`) all predate the generalisation.
+ *
+ * New code should import from `./reuseLicenses` (`@artex/shaders/reuse-licenses`).
+ */
+export {
+  REUSE_LICENSES,
+  REUSE_LICENSES as SHARED_SHADER_LICENSES,
+  getReuseLicense,
+  getReuseLicense as getSharedShaderLicense,
+  isReuseLicenseId,
+  isReuseLicenseId as isShareableShaderLicenseId,
+} from "./reuseLicenses";
 
-export interface SharedShaderLicenseDefinition {
-  id: SharedShaderLicenseId;
-  label: string;
-  summary: string;
-  recommended?: boolean;
-}
-
-export const SHARED_SHADER_LICENSES: SharedShaderLicenseDefinition[] = [
-  {
-    id: "mit",
-    label: "MIT",
-    summary: "Permissive software license. Reuse and modification allowed with attribution and license notice.",
-    recommended: true,
-  },
-  {
-    id: "apache-2.0",
-    label: "Apache 2.0",
-    summary: "Permissive software license with attribution requirements and an explicit patent grant.",
-  },
-  {
-    id: "bsd-3-clause",
-    label: "BSD 3-Clause",
-    summary: "Permissive software license with notice retention and no-endorsement language.",
-  },
-  {
-    id: "cc0-1.0",
-    label: "CC0 1.0",
-    summary: "Public-domain-style dedication. Others can reuse the shader without attribution.",
-  },
-];
-
-const LICENSE_BY_ID = new Map(SHARED_SHADER_LICENSES.map((license) => [license.id, license]));
-
-export const isShareableShaderLicenseId = (value: string | null | undefined): value is SharedShaderLicenseId =>
-  typeof value === "string" && LICENSE_BY_ID.has(value as SharedShaderLicenseId);
-
-export const getSharedShaderLicense = (
-  value: string | null | undefined,
-): SharedShaderLicenseDefinition | null => {
-  if (!value || !isShareableShaderLicenseId(value)) return null;
-  return LICENSE_BY_ID.get(value) ?? null;
-};
+export type {
+  ReuseLicenseId,
+  ReuseLicenseId as SharedShaderLicenseId,
+  ReuseLicenseDefinition,
+  ReuseLicenseDefinition as SharedShaderLicenseDefinition,
+} from "./reuseLicenses";

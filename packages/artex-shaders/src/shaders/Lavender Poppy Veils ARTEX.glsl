@@ -1,6 +1,7 @@
 // Lavender Poppy Veils ARTEX.glsl
 // Reference: forside_art_...3830519519761291017
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float iTime;
 uniform float uTargetAspect;

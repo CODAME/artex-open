@@ -1,6 +1,7 @@
 // Matrix Op ARTEX — Menger fractal distortion applied to artwork
 // Based on coyote's shader (shadertoy.com/view/ltfGzS), rewritten for ARTEX compositing.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float uTargetAspect;
 uniform float targetAspect;

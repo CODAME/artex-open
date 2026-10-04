@@ -1,13 +1,9 @@
 # ARTEX Open Layer
 
-This repository contains the open-layer packages of ARTEX —
+This repository contains the open-layer packages of [ARTEX](https://artex.art) —
 a creator tool for composing artist-authored interactive experiences.
 
 > **North star:** Everything serves living art.
-
-## ARTEX Display
-
-Download the desktop player from [Releases](https://github.com/CODAME/artex-open/releases/latest). See [DISPLAY_GUIDE.md](./DISPLAY_GUIDE.md) for installation and usage instructions.
 
 ## Packages
 
@@ -18,9 +14,10 @@ Download the desktop player from [Releases](https://github.com/CODAME/artex-open
 | [`@artex/extensions`](./packages/artex-extensions/) | Extension host API — register shaders, media inputs, and sandbox modules | Apache 2.0 |
 | [`@artex/experiments`](./packages/artex-experiments/) | R&D sandbox tracks for Three.js, TouchDesigner bridge, and more | Apache 2.0 |
 
-## Contributing
+The packages are synced automatically from the ARTEX monorepo; changes made
+directly here are overwritten by the next sync.
 
-See [PLATFORM_DEV_GUIDE.md](./PLATFORM_DEV_GUIDE.md) — the full contributor guide.
+## Contributing
 
 - **Add a shader:** [SHADER_GUIDE.md](./packages/artex-shaders/SHADER_GUIDE.md)
 - **Add a sandbox:** [EXPERIMENTS_GUIDE.md](./packages/artex-experiments/EXPERIMENTS_GUIDE.md)
@@ -31,22 +28,12 @@ DCO sign-off required on all commits (`git commit -s`).
 
 ## Dev Setup
 
-This is a **library-only repository** — there is no runnable app or dev server
-in `artex-open`. The packages are consumed by the private ARTEX creator app.
+Needs Node 22 and npm 11 or newer (`npx npm@11 install` if your Node ships npm 10).
 
 ```bash
-# Install all workspace dependencies
 npm install
-
-# Run the full test suite
 npm test
-
-# TypeScript build — must produce zero errors before a PR
-npm run build
 ```
-
-To preview shaders or experiments visually, use the hosted ARTEX platform.
-There is no local studio in this repo.
 
 ## License
 

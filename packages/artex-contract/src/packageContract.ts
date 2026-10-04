@@ -18,6 +18,8 @@ export interface PackageAssetManifest {
   maskPaths: Record<string, string>;
   depthPath: string | null;
   shaderChannelPaths: (string | null)[];
+  /** Bundled soundtrack path ("audio/<file>"), or null when the piece has none. */
+  audioPath: string | null;
 }
 
 export interface LoadedCodamePackage {
@@ -258,6 +260,7 @@ export async function readCodamePackageArchive(zipFile: Blob | ArrayBuffer | Uin
     maskPaths: config.assets?.masks ? { ...config.assets.masks } : {},
     depthPath: config.assets?.depth ?? null,
     shaderChannelPaths: projectData?.shaderChannels.paths.slice(0, 4) ?? [null, null, null, null],
+    audioPath: config.assets?.audio ?? null,
   };
 
   const referencedPaths = new Set<string>();
@@ -268,6 +271,7 @@ export async function readCodamePackageArchive(zipFile: Blob | ArrayBuffer | Uin
   assets.shaderChannelPaths.forEach((path) => {
     if (path) referencedPaths.add(path);
   });
+  if (assets.audioPath) referencedPaths.add(assets.audioPath);
 
   const files = new Map<string, Blob>();
   const warnings: string[] = [];

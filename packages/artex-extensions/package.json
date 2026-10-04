@@ -7,6 +7,9 @@
   "scripts": {
     "test": "vitest run"
   },
+  "dependencies": {
+    "@artex/contract": "0.0.0"
+  },
   "exports": {
     ".": "./src/index.ts"
   }

@@ -1,0 +1,114 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.323Z via scripts/extract_v1_fixtures.mjs from production piece id=d2435d85-a8eb-4d9c-9eb4-62604a6b7c41 (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "the-new-human-b-w",
+  "sourcePieceId": "d2435d85-a8eb-4d9c-9eb4-62604a6b7c41",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "The New Human B&W",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "static",
+      "shader_modules": [],
+      "advancedShaderModules": [],
+      "shader": {
+        "flowIntensity": 0,
+        "flowSpeed": 0,
+        "flowScale": 1
+      },
+      "interactions": {
+        "audioReactive": false,
+        "proximitySensor": false,
+        "cameraReactive": false,
+        "gestureLab": false
+      },
+      "interaction": {
+        "supportsProximity": false,
+        "supportsAmbientLight": false,
+        "events": []
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "still",
+            "colorTemperatureShift": 0,
+            "noiseIntensity": 0,
+            "brightnessShift": 0
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 0,
+        "breathingEnabled": false,
+        "parallaxEnabled": false,
+        "colorShiftEnabled": false
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0,
+          "breathingIntensity": 0,
+          "textureDrift": 0
+        }
+      },
+      "mood": 0.12
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "filament-column-artex",
+        "activeShaderKey": "filament-column-artex",
+        "userShaderPatched": "// Mactuitui Filament Column ARTEX.glsl\n// Reference: mactuitui_1772758310_3846497825966335158_3065232260.mp4\nprecision mediump float;\n\nuniform float uTime;\nuniform vec2 uResolution;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\nconst float PI = 3.14159265359;\nconst float TAU = 6.28318530718;\n\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\n\nfloat hash11(float p) {\n  return fract(sin(p * 127.1 + 311.7) * 43758.5453123);\n}\n\nfloat hash12(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);\n}\n\nfloat noise2(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = hash12(i);\n  float b = hash12(i + vec2(1.0, 0.0));\n  float c = hash12(i + vec2(0.0, 1.0));\n  float d = hash12(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec3 palette(float t) {\n  return 0.58 + 0.42 * cos(TAU * (vec3(0.10, 0.36, 0.68) + t));\n}\n\nfloat softLine(float dist, float width) {\n  float w = max(width, 1e-4);\n  return exp(-pow(abs(dist) / w, 1.38));\n}\n\nfloat columnEnvelope(float s, float spread) {\n  float bell = pow(max(0.0, sin(s * PI)), 0.72);\n  return mix(0.12, 0.56, bell) * spread;\n}\n\nfloat strandYWarp(float s, float phase, float time, float orbit) {\n  return 0.040 * sin(s * TAU * 1.9 + phase * 0.8 - time * (0.20 + orbit * 0.24))\n    + 0.018 * sin(s * TAU * 5.2 - phase * 1.4 + time * (0.28 + orbit * 0.35));\n}\n\nfloat strandCurve(float s, float phase, float time, float spread, float orbit, float detail) {\n  float env = columnEnvelope(s, spread);\n  float lobe = sin(s * (4.2 + detail * 2.0) * PI + phase + time * (0.55 + orbit * 0.42));\n  float curl = sin(s * (12.0 + detail * 5.0) + phase * 1.8 - time * (0.80 + orbit * 0.72));\n  float knot = sin(s * (22.0 + detail * 8.5) + phase * 2.7 + time * (0.22 + orbit * 0.45));\n  return env * (0.64 * lobe + 0.24 * curl + 0.12 * knot);\n}\n\nvoid addGlow(inout vec3 color, vec3 ink, float alpha) {\n  float a = sat(alpha);\n  color += ink * a;\n}\n\nvoid main() {\n  vec2 res = max(uResolution, vec2(1.0));\n  vec2 uv = gl_FragCoord.xy / res;\n  vec2 p = uv * 2.0 - 1.0;\n  p.x *= res.x / res.y;\n\n  float audio = sat(uAudioLevel);\n  float bass = sat(uBassLevel);\n  float proximity = sat(uProximity);\n  float camera = sat(uCameraLevel);\n  float presence = max(proximity, camera);\n  float energy = sat(audio * 0.45 + bass * 0.75);\n  float drive = max(presence, energy);\n\n  float spread = 0.74 + 0.34 * sat(uEffectParam1 * 0.55) + 0.16 * presence;\n  float orbitSpeed = 0.42 + 0.96 * sat(uEffectParam2 * 0.55) + 0.52 * energy + 0.20 * camera;\n  float veil = 0.44 + 0.92 * sat(uEffectParam3 * 0.55) + 0.30 * proximity;\n  float time = uTime * orbitSpeed;\n  float bassPulse = 1.0 + 0.15 * bass * sin(uTime * 4.0);\n\n  vec3 color = vec3(0.0);\n\n  float columnMask = exp(-pow(length(vec2(p.x * 1.8, p.y * 0.55 + 0.02 * sin(time * 0.25))) * 0.82, 2.0));\n  color += vec3(0.0025, 0.0018, 0.0045) * columnMask;\n\n  float baseS = clamp((p.y + 1.08) / 2.16, 0.0, 1.0);\n\n  const int SHEETS = 6;\n  for (int i = 0; i < SHEETS; i++) {\n    float fi = float(i);\n    float seed = fi + 41.0;\n    float phase = seed * 1.93;\n    float orbit = 0.70 + hash11(seed * 4.3) * 1.1;\n    float yWarp = strandYWarp(baseS, phase, time * 0.7, orbit) * 0.8;\n    float s = clamp((p.y + yWarp + 1.08) / 2.16, 0.0, 1.0);\n    float env = columnEnvelope(s, spread * (1.08 + 0.10 * hash11(seed * 1.7)));\n    float x = env * (\n      0.92 * sin(s * PI * (2.5 + orbit * 0.35) + phase + time * (0.22 + orbit * 0.16))\n      + 0.28 * sin(s * TAU * 4.8 - phase * 1.2 - time * 0.20)\n    );\n    x += 0.06 * sin(time * 0.18 + phase * 1.6);\n\n    float width = mix(0.085, 0.15, hash11(seed * 2.9)) * (0.65 + 0.55 * veil) * bassPulse;\n    float sheet = exp(-pow(abs(p.x - x) / max(width, 1e-4), 2.2));\n    float flutter = 0.5 + 0.5 * sin(s * TAU * (1.6 + hash11(seed * 3.8)) + phase * 0.6 - time * (0.15 + orbit * 0.08));\n    float texture = 0.55 + 0.45 * noise2(vec2((p.x - x) * 8.0, s * 9.0 + seed + time * 0.08));\n    float mask = smoothstep(0.03, 0.20, s) * (1.0 - smoothstep(0.88, 0.99, s));\n    sheet *= pow(flutter, 2.6) * texture * mask;\n\n    vec3 sheetCol = palette(fract(0.18 + hash11(seed * 6.2) * 0.6 - s * 0.35 + time * 0.018));\n    addGlow(color, sheetCol, sheet * 0.030 * (0.70 + 0.50 * drive));\n  }\n\n  const int STRANDS = 18;\n  for (int i = 0; i < STRANDS; i++) {\n    float fi = float(i);\n    float seed = fi + 1.0;\n    float phase = seed * 1.618 + sin(seed * 2.17) * 0.8;\n    float orbit = 0.58 + hash11(seed * 2.9) * 1.18;\n    float detail = 0.38 + hash11(seed * 5.1) * 1.15;\n\n    float yWarp = strandYWarp(baseS, phase, time, orbit);\n    float s = clamp((p.y + yWarp + 1.08) / 2.16, 0.0, 1.0);\n    float x = strandCurve(s, phase, time, spread * (0.94 + 0.12 * hash11(seed * 1.4)), orbit, detail);\n    x += 0.030 * sin(time * 0.24 + phase * 1.7) * columnEnvelope(s, spread * 0.8);\n    x += 0.022 * (camera - 0.5) * sin(s * PI * 2.0 + phase);\n\n    float width = mix(0.0022, 0.0066, hash11(seed * 7.4)) * (0.84 + 0.55 * energy) * bassPulse;\n    float dist = p.x - x;\n    float line = softLine(dist, width);\n    float glow = softLine(dist, width * (5.4 + 2.4 * veil));\n    float outer = softLine(dist, width * (15.0 + 9.0 * veil));\n\n    float twist = 0.5 + 0.5 * sin(\n      dist * 155.0\n      + s * TAU * (3.2 + detail * 1.8)\n      + phase\n      - time * (0.28 + orbit * 0.18)\n    );\n    float thread = pow(twist, 6.0);\n    float mask = smoothstep(0.015, 0.09, s) * (1.0 - smoothstep(0.94, 0.995, s));\n    float tail = 0.65 + 0.35 * sin(s * PI * (2.0 + detail * 0.35) + phase * 1.2 + time * 0.12);\n\n    vec3 strandCol = palette(fract(0.86 - s * 0.60 + hash11(seed * 3.7) * 0.82 + time * 0.026));\n    strandCol = mix(strandCol, vec3(1.0), 0.18 + 0.24 * pow(1.0 - abs(s - 0.5) * 1.85, 1.8));\n\n    addGlow(color, strandCol, line * thread * mask * (0.22 + 0.26 * drive) * tail);\n    addGlow(color, strandCol, glow * mask * 0.070 * (0.65 + 0.45 * veil));\n    addGlow(color, strandCol, outer * mask * 0.012 * (0.55 + 0.45 * energy));\n  }\n\n  float coreX = 0.03 * sin(p.y * 6.0 + time * 0.95) + 0.015 * sin(p.y * 14.0 - time * 0.7);\n  float coreWidth = (0.016 + 0.045 * columnEnvelope(baseS, spread * 0.78)) * (0.92 + 0.35 * bassPulse);\n  float core = softLine(p.x - coreX, coreWidth);\n  vec3 coreCol = mix(vec3(1.0, 0.75, 0.54), vec3(0.74, 0.95, 1.0), sat(baseS * 1.05));\n  addGlow(color, coreCol, core * (0.045 + 0.16 * energy));\n\n  float halo = exp(-pow(length(vec2(p.x * 1.9, p.y * 0.7)), 2.0) * (1.6 - 0.2 * drive));\n  color += vec3(0.012, 0.008, 0.018) * halo * (0.18 + 0.18 * veil);\n\n  color = 1.0 - exp(-color * (1.10 + 0.32 * veil + 0.20 * energy));\n  color = pow(color, vec3(0.94));\n  color = mix(vec3(0.0), color, sat(uEffectStrength));\n\n  gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "Filament Column ARTEX.glsl",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "normal",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 0.88,
+        "shaderParams": {
+          "param1": 1,
+          "param2": 1,
+          "param3": 1
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": true,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 1
+      }
+    }
+  }
+}

@@ -1,4 +1,6 @@
 // src/types.ts
+import type { AssetSharingSettings } from "./assetSharing";
+import type { ArtexSignalType } from "./v2/types";
 
 /** Renderer hint — selects the rendering backend for an experience */
 export type RendererHint = "shader" | "particle" | "threejs" | "threejs+particle" | "p5js" | "auto";
@@ -9,7 +11,13 @@ export type EffectClass =
   | "particle-trails"
   | "scene-driven-3d"
   | "2d-compositor"
-  | string;
+  | (string & {});
+
+/** Per-asset sharing settings map — stored inside ConfigJson. */
+export interface AssetSharingConfig {
+  baseImage?: AssetSharingSettings | null;
+  shader?: AssetSharingSettings | null;
+}
 
 export interface EvolutionPhase {
   startDay: number;
@@ -86,13 +94,190 @@ export type LLMProvider =
   | "custom_openai_compatible";
 export type AIConnectionStatus = "unknown" | "ok" | "error";
 export type AISuggestionSource = "local" | "remote";
-export type RendererMode = "webgl" | "three-experimental" | "hybrid-reactive-field" | "p5js" | "html";
+export type RendererMode = "webgl" | "three-experimental" | "hybrid-reactive-field" | "p5js" | "html" | "webgpu";
+
+/** The canonical set, for membership checks and for validating writers. */
+const RENDERER_MODES: ReadonlySet<string> = new Set<RendererMode>([
+  "webgl", "three-experimental", "hybrid-reactive-field", "p5js", "html", "webgpu",
+]);
+
+/**
+ * Legacy `rendererMode` values that were written to saved configs but are not
+ * members of {@link RendererMode}, mapped to what they were meant to be.
+ *
+ * `"reactive-field"` is *style/medium* vocabulary (ArtistPreferredMedium, the
+ * style pickers, library tags). The Create flow wrote it as a RENDERER mode for
+ * particle and scene pieces through a `Record<BlockKind, string>` that erased
+ * the union, and nothing validates rendererMode at runtime — so it reached
+ * Firestore and is in saved data (#3242). Every reader that branches on the
+ * mode therefore fell through to its default: those pieces got the shader
+ * canvas in the Studio, no hybrid runtime on the published page, and no "3D"
+ * badge in the library.
+ *
+ * Repaired on READ rather than by backfilling the records, so a piece is
+ * correct the moment it is opened and no migration has to reach every doc.
+ */
+const LEGACY_RENDERER_MODE_ALIASES: Readonly<Record<string, RendererMode>> = {
+  "reactive-field": "hybrid-reactive-field",
+};
+
+/**
+ * A stored `rendererMode` as a real {@link RendererMode}.
+ *
+ * Returns null for absent or unrecognized values so callers keep their own
+ * fallback rather than inheriting one — `getRendererCapabilities` defaults to
+ * `webgl`, but a badge or a label may want to render nothing instead.
+ */
+export function normalizeRendererMode(value: string | null | undefined): RendererMode | null {
+  if (!value) return null;
+  if (RENDERER_MODES.has(value)) return value as RendererMode;
+  return LEGACY_RENDERER_MODE_ALIASES[value] ?? null;
+}
+
+/** True when `value` is a member of {@link RendererMode} as written. */
+export function isRendererMode(value: string | null | undefined): value is RendererMode {
+  return typeof value === "string" && RENDERER_MODES.has(value);
+}
 export type InteractionActionId =
   | "stop_open_palm"
   | "exit_wave"
   | "explosion_mouth_open"
   | "celebration_clap_sound"
-  | "zoom_proximity";
+  | "zoom_proximity"
+  | "swap_shader_on_signal";
+
+/**
+ * All MediaPipe-derived gesture signals that can be bound to actions. Matches
+ * the keys in `InteractionGestureSignals` (see apps/creator/src/utils/interactionLab.ts).
+ */
+export type GestureSignalName =
+  | "pinchHold"
+  | "pinchReleasePulse"
+  | "pinchDistance"
+  | "spread"
+  | "swipe"
+  | "swipeLeft"
+  | "swipeRight"
+  | "swipeUp"
+  | "swipeDown"
+  | "openPalm"
+  | "mouthOpen"
+  | "jawOpen"
+  | "fist"
+  | "fistReleasePulse"
+  | "pointing"
+  | "thumbsUp"
+  | "thumbsDown"
+  | "victory"
+  | "iLoveYou"
+  | "smile"
+  | "frown"
+  | "eyeWink"
+  | "leftEyeOpen"
+  | "rightEyeOpen"
+  | "eyebrowRaise"
+  | "handDepth"
+  | "indexCurl"
+  | "middleCurl"
+  | "ringCurl"
+  | "pinkyCurl"
+  | "leftHandPresent"
+  | "rightHandPresent"
+  | "manualClapPulse"
+  | "holdingPhone";
+
+/**
+ * Visual configuration for the skeleton/presence overlay canvas. All fields
+ * are optional; missing values fall back to `DEFAULT_SKELETON_OVERLAY_STYLE`.
+ */
+export interface SkeletonOverlayStyle {
+  showFace?: boolean;
+  showHands?: boolean;
+  showPose?: boolean;
+  showFaceFeatures?: boolean;   // draw detailed face groups (eyes/brows/lips/iris/oval) in addition to contours
+  showGestureLabels?: boolean;  // float the detected gesture label near each hand's wrist
+  faceColor?: string;       // CSS color — face landmark dots & connections
+  handColor?: string;       // CSS color — fallback when L/R colors are absent
+  leftHandColor?: string;   // CSS color — specifically for hands labelled "Left"
+  rightHandColor?: string;  // CSS color — specifically for hands labelled "Right"
+  poseColor?: string;       // CSS color — pose landmarks + skeleton connections
+  opacity?: number;         // 0..1 — overall overlay opacity multiplier
+  lineWidth?: number;       // px — connection stroke width
+  pointRadius?: number;     // px — landmark dot radius
+  highlightFingertips?: boolean; // render fingertip landmarks at a larger radius for tactile emphasis
+}
+
+/**
+ * User-authored gesture → action binding. When the named gesture signal rises
+ * above `threshold` (default 0.5) and the binding is enabled, the bound
+ * action fires (with `cooldownMs` debounce, default 500ms).
+ */
+export interface GestureActionBinding {
+  id: string;
+  gesture: GestureSignalName;
+  action: InteractionActionId;
+  enabled: boolean;
+  threshold?: number;
+  cooldownMs?: number;
+  /**
+   * Only read by `swap_shader_on_signal`: the builtin shader id to swap to
+   * while the bound signal is above threshold. On release the runtime
+   * restores the project's configured shader.
+   */
+  triggeredShaderId?: string;
+}
+
+/**
+ * Phase 2 of the unified Interactions proposal — a **continuous** binding
+ * modulates an artwork parameter with a scalar signal (e.g. camera proximity
+ * drives the `bloomAmount` uniform). Complements the discrete gesture →
+ * action bindings above.
+ *
+ * `source.id` must be a valid signal source id (`camera`, `mic`, `time`,
+ * `simulator.pointer`, or a plugin-origin id). `source.signal` is one of the
+ * signal names the source publishes (e.g. `proximity`, `level`, `elapsed`).
+ *
+ * `target.name` references `manifest.parameters.exposes[].id` from the
+ * cross-runtime manifest work. For shader renderers it maps to a uniform;
+ * for p5.js/html it maps to a named sketch parameter.
+ *
+ * This type is **additive** in this release. Runtime subscription and UI
+ * for creating bindings ships in a follow-up; the type lands first so
+ * downstream workstreams can reference a stable shape.
+ */
+export interface ContinuousBinding {
+  id: string;
+  /** Stable id of the signal source. */
+  sourceId: string;
+  /** Signal name within the source, e.g. "proximity", "level", "elapsed". */
+  signal: string;
+  /** Parameter id from `manifest.parameters.exposes` the binding drives. */
+  parameter: string;
+  /** Input multiplier applied before smoothing/clamp. Defaults to 1.0. */
+  gain?: number;
+  /** Output clamp applied after gain + smoothing. Defaults to [0, 1]. */
+  range?: [number, number];
+  /** Exponential smoothing factor in [0,1]. 0 = passthrough, 0.9 = heavy. Defaults to 0. */
+  smoothing?: number;
+  enabled: boolean;
+}
+
+/**
+ * One parameter exposed by a manifest for binding. Lands here now so the
+ * cross-runtime manifest work (PR #61 proposal) has a stable shape to target
+ * — the runtime that consumes it arrives in a follow-up.
+ */
+export interface ParameterExposure {
+  /** Stable id — referenced from `ContinuousBinding.parameter`. */
+  id: string;
+  label: string;
+  /** Expected [min, max] range. Bindings clamp to this if no explicit range. */
+  range?: [number, number];
+  /** Unit hint for human-readable UI ("%", "px", "°"). */
+  unit?: string;
+  /** Default value when no binding is active. */
+  default?: number;
+}
 
 export interface AISettings {
   enabled: boolean;
@@ -128,6 +313,33 @@ export interface ArtexSuggestionPatch {
   shader?: ArtexSuggestionShaderPatch;
 }
 
+/**
+ * The curatorial origin a recommendation traces back to (Design Commitment 5,
+ * "Taste as Infrastructure"). AI amplifies human judgment; it does not replace
+ * it, so every recommendation carries where its taste came from. This is
+ * orthogonal to `ArtworkSuggestionState.currentSetupOrigin`, which records *how*
+ * a setup was produced (manual / ai / random); attribution records *why* / from
+ * whom. Helpers and validation live in `ai/suggestionAttribution`.
+ */
+export type SuggestionAttributionType =
+  | "artist-mapping"
+  | "curator"
+  | "system-context"
+  | "codame-principle";
+
+export interface SuggestionAttribution {
+  /** Which curatorial-origin category this recommendation traces back to. */
+  type: SuggestionAttributionType;
+  /** Inline, user-facing byline shown with the suggestion. Always required. */
+  label: string;
+  /** Optional longer explanation, surfaced on demand. */
+  detail?: string;
+  /** When `type === "curator"`: links to the curator's profile. */
+  curatorId?: string;
+  /** When `type === "curator"`: the curator's display name. */
+  curatorName?: string;
+}
+
 export interface ArtexSuggestion {
   id: string;
   createdAt: string;
@@ -136,6 +348,9 @@ export interface ArtexSuggestion {
   summary: string;
   rationale?: string;
   inputSignature?: string;
+  /** Curatorial origin of this recommendation. Present on every AI-generated
+   *  recommendation; absent on pure-random variations (not recommendations). */
+  attribution?: SuggestionAttribution;
   patch: ArtexSuggestionPatch;
 }
 
@@ -192,7 +407,12 @@ export interface InteractionsConfig {
   interactionConsoleLogs?: boolean; // Emits live input/action traces in browser console
   mediapipeGestures?: boolean; // Camera hand gesture recognition (MediaPipe Tasks)
   mediapipeFaceProximity?: boolean; // Optional face distance cues from FaceLandmarker
+  mediapipeObjectDetection?: boolean; // Opt-in MediaPipe ObjectDetector (COCO). Required for `holdingPhone` signal.
   mediapipeTestMode?: boolean; // Enables visual tracker test panel
+  showSkeletonOverlayInPlayerMode?: boolean; // Skeleton/presence overlay default-on in player mode & published view
+  skeletonOverlayStyle?: SkeletonOverlayStyle; // Visual configuration for presence overlay
+  gestureActionBindings?: GestureActionBinding[]; // User-authored gesture → action mappings
+  continuousBindings?: ContinuousBinding[]; // Phase 2: signal → parameter modulation (additive; runtime wiring ships later)
   interactionProfile?: InteractionProfile; // User-facing preset for interaction mapping
   actionMappings?: InteractionActionMapping[]; // Input -> effect mapping cards used by default UX
   customActionMappings?: InteractionActionMapping[]; // User-defined mappings persisted under Custom mode
@@ -201,6 +421,82 @@ export interface InteractionsConfig {
   audioReactiveIntensity?: number; // 0..1 — post-processing visual response scale (default 0.5)
   supportsProximity?: boolean; // Legacy field, kept for backward compatibility
   supportsAmbientLight?: boolean; // Legacy field, kept for backward compatibility
+  // ── Music-as-input via MIDI (Phase A) ─────────────────────────────────────
+  // Master toggle for Web MIDI input. When false, no MIDI processing happens.
+  // See docs/video-driven-midi-plan.md.
+  midiInputEnabled?: boolean;
+  // Configuration block: port id, channel filter, signal mappings.
+  midiInput?: MidiInputConfig;
+}
+
+// ── MIDI input config (Phase A — Music-as-input) ───────────────────────────
+//
+// Receives MIDI from an external music app (Ableton, Max, Logic, Bitwig…)
+// via Web MIDI API. Incoming events are derived into continuous signals
+// (beatPhase, tempo, CC values, note triggers) that feed the existing
+// shader-interaction pipeline. See docs/video-driven-midi-plan.md for
+// the full design and signal catalog.
+
+/** Curve applied between raw MIDI signal (0..1) and destination signal. */
+export type MidiCurve = "linear" | "exp" | "log" | "threshold";
+
+/**
+ * What MIDI data to read on each frame. Static-named sources cover the
+ * common timing/note aggregates; the discriminated-union variants read
+ * specific CCs and note triggers.
+ */
+export type MidiSourceId =
+  | "beatPhase"        // 0..1, increments on MIDI Clock pulses, wraps per quarter note
+  | "barPhase"         // 0..1, syncs to Song Position Pointer; falls back to beatPhase * 0.25
+  | "tempo"            // BPM / 240, clamped 0..1
+  | "noteDensity"      // count of note-ons in last second / 16, clamped
+  | "activeNotes"      // count of currently-held notes / 16, clamped
+  | "lastNoteVelocity" // velocity of most recent note-on, decays over 500ms
+  | "lastNotePitch"    // note number of most recent note-on / 127
+  | { kind: "cc"; channel: number | "any"; controller: number } // channel 1..16, controller 0..127
+  | { kind: "note-trigger"; channel: number | "any"; note: number }; // pulses to 1.0 on note-on, 100ms decay
+
+/** Destination signal slot in the shader-interaction pipeline. */
+export type MidiSignalDestination =
+  | "audioLevel"
+  | "bassLevel"
+  | "midLevel"
+  | "trebleLevel"
+  | "proximity"
+  | "cameraLevel"
+  | "mediapipeIntensity"
+  | "midi.slot1"
+  | "midi.slot2"
+  | "midi.slot3";
+
+/** A single MIDI source → shader-signal mapping. */
+export interface MidiSignalMapping {
+  id: string;
+  source: MidiSourceId;
+  destination: MidiSignalDestination;
+  curve: MidiCurve;
+  /** Smoothing alpha (0.05 = slow, 0.5 = snappy). Default 0.2. */
+  smoothingAlpha: number;
+}
+
+/**
+ * Per-piece MIDI input configuration. Lives on `InteractionsConfig`. The
+ * `portId` is opaque (returned by `navigator.requestMIDIAccess()`) and
+ * stable across reconnects within a session.
+ */
+export interface MidiInputConfig {
+  /** Web MIDI input port id. Null/undefined = no port selected yet. */
+  portId?: string | null;
+  /** Optional channel filter (1..16). When omitted/empty, all channels pass. */
+  channels?: number[];
+  /** Source → destination mappings. Empty = use default beat-sync fallback. */
+  mappings: MidiSignalMapping[];
+  /** Source template id when forked from a CODAME-provided patch. */
+  sourceTemplateId?: string | null;
+  /** Optional human-readable label. */
+  label?: string;
+  /** Optional channel labels surfaced in the mapping editor + monitor. */
+  channelLabels?: Record<number, string>;
 }
 
 export interface DiagnosticsSummaryItem {
@@ -286,20 +582,129 @@ export interface PreviewConfig {
   shaderOnlyCanvasBackgroundColor?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Signal Bindings for imported runtimes (p5.js / HTML)
+//
+// Universal capability that maps ARTEX `artex.*` inputs onto an imported work's
+// parameters without editing the imported source. Two layers:
+//   - Layer 0 (`CodeInputShimConfig`): drive the runtime's NATIVE inputs
+//     (p5 `mouseX`/`mouseY`, synthetic DOM pointer events) from signals — zero
+//     config beyond a toggle, so existing sketches react on a display.
+//   - Layer 1 (`CodeParamBinding` → `artex.params`): declarative signal→param
+//     bindings the artist configures in Studio, reusing the same transform math
+//     as `ShaderParamBinding` (floor/ceiling/curve/range/smoothing).
+// See docs/signal-bindings-imported-runtimes.md.
+// ---------------------------------------------------------------------------
+
+/** Which signal drives the synthesized pointer position under Layer 0. */
+export type CodeInputPointerSource = "point" | "face" | "movement";
+
+/**
+ * Layer 0 — native-input shimming for an imported runtime. When enabled, the
+ * sandbox writes the runtime's own input channels each frame from live signals,
+ * so a sketch that only reads `mouseX` / listens for `mousemove` becomes
+ * reactive on a pointer-less display.
+ */
+export interface CodeInputShimConfig {
+  /** Master switch. When false (or absent) no shimming occurs. */
+  enabled: boolean;
+  /**
+   * Signal pair driving the synthesized cursor. `"point"` uses the pointing
+   * finger (`pointX`/`pointY`), `"face"` uses face position, `"movement"`
+   * sweeps with movement energy. Defaults to `"point"`.
+   */
+  pointerSource?: CodeInputPointerSource;
+  /**
+   * Signal whose value (≥ 0.5) synthesizes a pressed state (p5 `mouseIsPressed`,
+   * DOM `mousedown`). E.g. `"pinch"`. When absent, no press is synthesized.
+   */
+  pressSignal?: ArtexSignalType | (string & {});
+}
+
+/**
+ * A bindable parameter an imported work advertises (Layer 1). The work reads
+ * `artex.params.<name>`; ARTEX lists declared params in the Studio binding UI.
+ */
+export interface CodeParamDecl {
+  /** Param key the sketch reads as `artex.params[name]`. */
+  name: string;
+  /** Human-readable label for the Studio UI. Defaults to `name`. */
+  label?: string;
+  /** Resting value used when no binding is active. Defaults to 0. */
+  default?: number;
+}
+
+/**
+ * Layer 1 — one signal→param binding for an imported runtime. Structurally a
+ * sibling of `ShaderParamBinding` (same transform pipeline) whose target is an
+ * `artex.params` key rather than a GLSL uniform. Evaluated each frame by
+ * `CodeParamBindingExecutor`, results posted into the sandbox's `artex.params`.
+ */
+export interface CodeParamBinding {
+  /** Stable id — preserves smoothing state across `setBindings` calls. */
+  id: string;
+  /** Signal source to sample each frame (hardware/runtime or World Signal). */
+  signal: ArtexSignalType | (string & {});
+  /** Target `artex.params` key (must match a declared `CodeParamDecl.name`). */
+  param: string;
+  /** Signal input floor — values below this are treated as 0. Defaults to 0. */
+  floor?: number;
+  /** Artist-defined signal ceiling — caps how far the environment pushes this
+   *  param. Values above this clamp to `outputRange[1]`. */
+  ceiling: number;
+  /** Output range [min, max] for the param value. Defaults to [0, 1]. */
+  outputRange?: [number, number];
+  /** Transfer curve applied after floor/ceiling normalisation. */
+  curve?: "linear" | "ease-in" | "ease-out" | "ease-in-out" | "step";
+  /** Exponential smoothing factor in [0, 1]. 0 = passthrough. */
+  smoothing?: number;
+  /** When false the binding is skipped; defaults to true. */
+  enabled?: boolean;
+}
+
+/**
+ * Which major version of the p5.js runtime a sketch is authored for.
+ *
+ * p5 2.0 renamed core sketch APIs (`curveVertex`→`splineVertex`,
+ * `curve`→`spline`, …), so a v1 sketch throws on the v2 runtime and vice
+ * versa. The platform bundles both runtimes and loads the one matching this
+ * field. Imports and existing work default to `"1"`; authoring against `"2"`
+ * is opt-in per sketch. See docs/p5-upgrade.md.
+ */
+export type P5MajorVersion = "1" | "2";
+
 /** P5.js sketch configuration stored in ConfigJson. */
 export interface P5jsSketchConfig {
   /** The sketch source code (instance-mode P5.js). */
   sketchSource: string;
+  /**
+   * p5.js runtime major version this sketch targets. Absent/`"1"` → p5 v1
+   * (the default for imports and existing work); `"2"` → p5 v2. See
+   * {@link P5MajorVersion}.
+   */
+  p5Version?: P5MajorVersion;
   /** Whether to use P5.js WebGL mode instead of 2D canvas. */
   webglMode?: boolean;
   /** Optional libraries to load alongside P5.js (e.g. "p5.sound"). */
   libraries?: string[];
+  /** Layer 0 — map ARTEX signals onto p5's native inputs (mouseX, etc.). */
+  inputShim?: CodeInputShimConfig;
+  /** Layer 1 — bindable params the sketch reads via `artex.params.<name>`. */
+  params?: CodeParamDecl[];
+  /** Layer 1 — signal→param bindings evaluated each frame. */
+  paramBindings?: CodeParamBinding[];
 }
 
 /** HTML experience configuration stored in ConfigJson. */
 export interface HtmlExperienceConfig {
   /** The full HTML source (including scripts). */
   htmlSource: string;
+  /** Layer 0 — synthesize DOM pointer events from ARTEX signals. */
+  inputShim?: CodeInputShimConfig;
+  /** Layer 1 — bindable params the page reads via `artex.params.<name>`. */
+  params?: CodeParamDecl[];
+  /** Layer 1 — signal→param bindings evaluated each frame. */
+  paramBindings?: CodeParamBinding[];
 }
 
 export interface PreviewSimulationState {
@@ -435,12 +840,26 @@ export interface ConfigJson {
     states?: string[]; // paths to state images: ["states/state1.png", "states/state2.png", ...]
     masks?: Record<string, string>; // { "eyes": "masks/mask_eyes.png", ... }
     depth?: string; // "maps/depth.png"
+    /**
+     * Bundled soundtrack path ("audio/<file>") for `pieceConfigV3.audio`. The
+     * track travels inside the package so a published or displayed piece can
+     * play it without reaching a catalog asset URL. `audio.assetId` stays the
+     * catalog reference; this is where the bytes actually live.
+     */
+    audio?: string;
   };
+
+  /**
+   * Per-asset sharing settings (visibility, license, rights confirmation).
+   * Stored with the config and displayed in the public artwork info panel.
+   * v1: tracks sharing for the base image/video and the user shader.
+   */
+  assetSharing?: AssetSharingConfig;
 
   /** V3 piece configuration — declarative recipe for shader stacks, evolution,
    *  behaviour models, scene/particle recipes, and gesture bindings.
    *  When present, the runtime uses this instead of legacy compiled config. */
-  pieceConfigV3?: import("./v3/types").PieceConfigV3;
+  pieceConfigV3?: import("./v3/types").PieceConfig;
 
   /** Rendering backend hint (optional, defaults to "auto") */
   rendererHint?: RendererHint;

@@ -1,0 +1,209 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.322Z via scripts/extract_v1_fixtures.mjs from production piece id=4a2beb50-6c9f-4fac-9e84-40f4e6c58b59 (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "untitled-experience",
+  "sourcePieceId": "4a2beb50-6c9f-4fac-9e84-40f4e6c58b59",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "Untitled experience",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "static",
+      "shader_modules": [],
+      "advancedShaderModules": [],
+      "shader": {
+        "flowIntensity": 0,
+        "flowSpeed": 0,
+        "flowScale": 1
+      },
+      "interactions": {
+        "simpleInteractionsEnabled": false,
+        "simpleInteractionMode": "none",
+        "audioReactive": false,
+        "proximitySensor": false,
+        "cameraReactive": false,
+        "gestureLab": false,
+        "interactionSafeMode": true,
+        "interactionHud": true,
+        "interactionLabTarget": "both",
+        "interactionConsoleLogs": false,
+        "mediapipeGestures": false,
+        "mediapipeFaceProximity": false,
+        "mediapipeTestMode": false,
+        "interactionProfile": "expressive",
+        "actionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 1500
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": false,
+            "target": "shader",
+            "sensitivity": "medium",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": false,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "customActionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 1500
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": false,
+            "target": "shader",
+            "sensitivity": "medium",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": false,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "touchMediaControls": {
+          "enabled": false,
+          "desktopFallback": "auto",
+          "resetGesture": "double-tap",
+          "baseline": {
+            "translateX": 0,
+            "translateY": 0,
+            "scale": 1,
+            "rotationDegrees": 0
+          }
+        }
+      },
+      "interaction": {
+        "supportsProximity": false,
+        "supportsAmbientLight": false,
+        "events": []
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "still",
+            "colorTemperatureShift": 0,
+            "noiseIntensity": 0,
+            "brightnessShift": 0
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 0,
+        "breathingEnabled": false,
+        "parallaxEnabled": false,
+        "colorShiftEnabled": false
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0,
+          "breathingIntensity": 0,
+          "textureDrift": 0
+        }
+      },
+      "mood": 0
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "anemone-dustfield-artex",
+        "activeShaderKey": "anemone-dustfield-artex",
+        "userShaderPatched": "// Anemone Dustfield ARTEX.glsl\n// Reference: forside_art_...3830519763634928470\nprecision mediump float;\nuniform float time;\nuniform float iTime;\nuniform float uTargetAspect;\nuniform float targetAspect;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform sampler2D uMainImage;\nuniform vec2 uMainImageResolution;\nuniform sampler2D uStateA;\nuniform vec2 uStateAResolution;\nuniform sampler2D uStateB;\nuniform vec2 uStateBResolution;\nuniform sampler2D uStateC;\nuniform vec2 uStateCResolution;\nuniform sampler2D uStateD;\nuniform vec2 uStateDResolution;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 uMediaTransform;\nuniform vec4 u_mediaTransform;\nuniform int uMediaTransformMainEnabled;\nuniform vec4 iDate;\nuniform vec4 iMouse;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform vec2 uLeftEye;\nuniform vec2 uRightEye;\nuniform vec2 uFaceCenter;\nuniform float uHasFace;\nuniform vec2 leftEye;\nuniform vec2 rightEye;\nuniform vec2 faceCenter;\nuniform float hasFace;\n\nuniform float uTime;\nuniform vec2 uResolution;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\n\nfloat hash11(float p) {\n  return fract(sin(p * 97.31 + 23.17) * 43758.5453123);\n}\n\nvec2 hash22(vec2 p) {\n  vec2 q = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));\n  return fract(sin(q) * 43758.5453123);\n}\n\nvoid addInk(inout vec3 color, vec3 ink, float a) {\n  float alpha = sat(a);\n  color = mix(color, ink, alpha * 0.25);\n  color += ink * alpha * 0.38;\n}\n\nfloat stem(vec2 p, float x, float y0, float y1, float bend, float seed, float time) {\n  float span = max(y1 - y0, 0.001);\n  float t = sat((p.y - y0) / span);\n  float sx = mix(x, x + bend, t) + bend * 0.55 * sin(t * 3.14159 + seed + time * 0.3);\n  float w = mix(0.003, 0.010, t);\n  float d = abs(p.x - sx);\n  float a = smoothstep(w * 3.2, w, d);\n  a *= smoothstep(y0 - 0.03, y0 + 0.02, p.y);\n  a *= 1.0 - smoothstep(y1 + 0.01, y1 + 0.06, p.y);\n  return a;\n}\n\nvec4 cupBloom(vec2 p, vec2 c, vec2 r, float seed, float time) {\n  vec2 q = p - c;\n  q += vec2(0.02 * sin(time * 0.45 + seed), 0.02 * cos(time * 0.35 + seed * 1.7));\n\n  vec2 e = q / max(r, vec2(0.001));\n  float d = length(e);\n  float bowl = smoothstep(1.02, 0.88, d);\n\n  float petal = 0.94 + 0.12 * sin(6.0 * atan(e.y, e.x) + seed * 2.1 + time * 0.16);\n  float edge = 1.0 - smoothstep(petal, petal + 0.08, d);\n\n  float ribs = pow(abs(sin(atan(e.y, e.x) * 28.0 + seed * 5.0 - time * 0.1)), 15.0);\n  float veil = exp(-pow((d - 0.72) / 0.25, 2.0));\n\n  float alpha = edge * (0.10 + 0.25 * ribs) + bowl * 0.08 + veil * 0.12;\n  vec3 col = mix(vec3(0.50, 0.60, 0.98), vec3(0.86, 0.90, 1.0), sat(1.0 - d));\n  return vec4(col, sat(alpha));\n}\n\nfloat pollenSpark(vec2 p, vec2 c, vec2 scale, float seed, float density) {\n  vec2 q = (p - c) / max(scale, vec2(0.001));\n  float mask = 1.0 - smoothstep(0.0, 1.0, length(q));\n\n  vec2 grid = q * mix(22.0, 42.0, density);\n  vec2 id = floor(grid);\n  vec2 gv = fract(grid) - 0.5;\n\n  vec2 h = hash22(id + seed);\n  float alive = step(0.74, h.x);\n  vec2 offset = (h - 0.5) * 0.36;\n  float d = length(gv - offset);\n  float spark = exp(-pow(d * 10.0, 2.0));\n\n  return mask * alive * spark;\n}\n\nvec4 filamentCylinder(vec2 p, vec2 c, vec2 size, float seed, float time) {\n  vec2 q = p - c;\n  q.y += size.y * 0.45;\n  float y = q.y / max(size.y, 0.001);\n\n  float w = mix(0.18, 0.42, sat(y));\n  float xNorm = abs(q.x / max(size.x, 0.001));\n  float side = 1.0 - smoothstep(w - 0.03, w + 0.06, xNorm);\n  float body = smoothstep(-0.15, 0.02, y) * (1.0 - smoothstep(1.08, 1.24, y));\n\n  float filaments = pow(abs(sin((q.x / max(size.x * w, 0.002)) * 58.0 + y * 3.0 + seed * 6.0 + time * 0.2)), 20.0);\n  float alpha = body * side * (0.12 + 0.52 * filaments);\n\n  vec3 col = mix(vec3(0.36, 0.45, 0.92), vec3(0.78, 0.84, 1.0), sat(y * 0.7 + 0.2));\n  col += vec3(1.0, 0.62, 0.64) * filaments * smoothstep(0.92, 1.06, y) * 0.45;\n  return vec4(col, sat(alpha));\n}\n\nvec4 leafGhost(vec2 p, vec2 c, vec2 r, float seed, float time) {\n  vec2 q = p - c;\n  float a = seed * 0.4 + time * 0.08;\n  float ca = cos(a), sa = sin(a);\n  q = mat2(ca, -sa, sa, ca) * q;\n  vec2 e = q / max(r, vec2(0.001));\n  float d = length(e);\n  float body = smoothstep(1.04, 0.92, d);\n  float mesh = pow(abs(sin(e.x * 20.0 + seed * 4.0) * sin(e.y * 16.0 - seed * 2.0)), 0.5);\n  float alpha = body * (0.02 + 0.11 * mesh);\n  vec3 col = mix(vec3(0.20, 0.30, 0.50), vec3(0.45, 0.60, 0.86), 0.5);\n  return vec4(col, sat(alpha));\n}\n\nvoid main() {\n  vec2 res = max(uResolution, vec2(1.0));\n  vec2 uv = gl_FragCoord.xy / res;\n  vec2 p = uv * 2.0 - 1.0;\n  p.x *= res.x / res.y;\n\n  float time = uTime * (0.44 + 0.72 * sat(uEffectParam2 * 0.6));\n  float bloomScale = 0.80 + 0.42 * sat(uEffectParam1 * 0.6);\n  float sparkWarmth = sat(uEffectParam3 * 0.5);\n\n  vec3 bg = mix(vec3(0.001, 0.006, 0.035), vec3(0.008, 0.020, 0.080), 0.34 + 0.45 * sat((p.y + 1.0) * 0.5));\n  vec3 color = bg;\n\n  const int LEAVES = 14;\n  for (int i = 0; i < LEAVES; i++) {\n    float seed = float(i) + 12.0;\n    vec2 c = vec2(mix(-0.8, 0.9, hash11(seed * 2.2)), mix(-0.95, 0.2, hash11(seed * 3.8)));\n    vec2 r = vec2(mix(0.10, 0.28, hash11(seed * 5.3)), mix(0.08, 0.22, hash11(seed * 6.9)));\n    vec4 l = leafGhost(p, c, r, seed, time);\n    addInk(color, l.rgb, l.a);\n  }\n\n  const int STEMS = 9;\n  for (int i = 0; i < STEMS; i++) {\n    float seed = float(i) + 58.0;\n    float x = mix(-0.95, 0.8, hash11(seed * 2.1));\n    float y0 = -1.08 - 0.08 * hash11(seed * 2.6);\n    float y1 = mix(-0.12, 0.86, hash11(seed * 4.0)) * bloomScale;\n    float bend = mix(-0.12, 0.12, hash11(seed * 6.1));\n    float a = stem(p, x, y0, y1, bend, seed, time);\n    vec3 stemCol = mix(vec3(0.30, 0.39, 0.66), vec3(0.64, 0.77, 1.0), hash11(seed * 8.2));\n    addInk(color, stemCol, a * 0.62);\n  }\n\n  const int BLOOMS = 6;\n  for (int i = 0; i < BLOOMS; i++) {\n    float seed = float(i) + 94.0;\n    vec2 c = vec2(mix(-0.72, 0.62, hash11(seed * 1.9)), mix(-0.66, 0.30, hash11(seed * 3.5)));\n    vec2 r = vec2(mix(0.16, 0.34, hash11(seed * 4.9)), mix(0.10, 0.19, hash11(seed * 7.2)));\n    vec4 b = cupBloom(p, c, r * bloomScale, seed, time);\n    addInk(color, b.rgb, b.a * 1.05);\n\n    float pollen = pollenSpark(p, c + vec2(0.0, 0.02 * r.y), r * vec2(0.7, 0.55), seed, sat(0.4 + 0.5 * bloomScale));\n    vec3 sparkCol = mix(vec3(0.86, 0.76, 0.66), vec3(1.0, 0.68, 0.52), sparkWarmth);\n    addInk(color, sparkCol, pollen * 0.95);\n  }\n\n  vec4 colA = filamentCylinder(p, vec2(-0.10, 0.58), vec2(0.24, 0.30), 2.0, time);\n  vec4 colB = filamentCylinder(p, vec2(0.30, 0.78), vec2(0.18, 0.24), 5.0, time + 0.4);\n  addInk(color, colA.rgb, colA.a);\n  addInk(color, colB.rgb, colB.a * 0.9);\n\n  color = 1.0 - exp(-color * (1.14 + 0.34 * sparkWarmth));\n  color = pow(color, vec3(0.95));\n\n  vec3 finalColor = mix(bg, color, sat(uEffectStrength));\n  gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "Anemone Dustfield ARTEX.glsl",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "normal",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 1.74,
+        "shaderParams": {
+          "param1": 1.45,
+          "param2": 1.75,
+          "param3": 1.6
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": true,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 1
+      }
+    }
+  }
+}

@@ -83,7 +83,16 @@ export const evaluateSuggestionPolicy = (
   const effectivePolicy = resolveEffectiveAIPolicy(settings, projectPolicy);
 
   if (!settings.enabled || effectivePolicy.provider === "disabled") {
-    return { ok: false, reason: "Enable a provider in AI settings to use suggestions." };
+    return { ok: false, reason: "Enable an external AI provider to use provider-based suggestions." };
+  }
+
+  // "local" remains a backward-compatible internal provider value, but it is no
+  // longer treated as part of the external provider workflow in product UI.
+  if (effectivePolicy.provider === "local") {
+    return {
+      ok: false,
+      reason: "Built-in ARTEX suggestions have moved under Behavior -> ARTEX Native AI.",
+    };
   }
 
   if (!effectivePolicy.metadataAllowed) {

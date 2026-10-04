@@ -1,0 +1,209 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.323Z via scripts/extract_v1_fixtures.mjs from production piece id=baa819db-4507-432c-a064-a3b93d945cf6 (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "fractal-brownian-motion-fbm",
+  "sourcePieceId": "baa819db-4507-432c-a064-a3b93d945cf6",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "Fractal Brownian Motion (fBm)",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "static",
+      "shader_modules": [],
+      "advancedShaderModules": [],
+      "shader": {
+        "flowIntensity": 0,
+        "flowSpeed": 0,
+        "flowScale": 1
+      },
+      "interactions": {
+        "simpleInteractionsEnabled": false,
+        "simpleInteractionMode": "none",
+        "audioReactive": false,
+        "proximitySensor": false,
+        "cameraReactive": false,
+        "gestureLab": false,
+        "interactionSafeMode": true,
+        "interactionHud": true,
+        "interactionLabTarget": "both",
+        "interactionConsoleLogs": false,
+        "mediapipeGestures": false,
+        "mediapipeFaceProximity": false,
+        "mediapipeTestMode": false,
+        "interactionProfile": "expressive",
+        "actionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 1500
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": false,
+            "target": "shader",
+            "sensitivity": "medium",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": false,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "customActionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 1500
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": false,
+            "target": "shader",
+            "sensitivity": "medium",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": false,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "touchMediaControls": {
+          "enabled": false,
+          "desktopFallback": "auto",
+          "resetGesture": "double-tap",
+          "baseline": {
+            "translateX": 0,
+            "translateY": 0,
+            "scale": 1,
+            "rotationDegrees": 0
+          }
+        }
+      },
+      "interaction": {
+        "supportsProximity": false,
+        "supportsAmbientLight": false,
+        "events": []
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "still",
+            "colorTemperatureShift": 0,
+            "noiseIntensity": 0,
+            "brightnessShift": 0
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 0,
+        "breathingEnabled": false,
+        "parallaxEnabled": false,
+        "colorShiftEnabled": false
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0,
+          "breathingIntensity": 0,
+          "textureDrift": 0
+        }
+      },
+      "mood": 0
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "kesson-fbm-image-distortion-artex",
+        "activeShaderKey": "kesson-fbm-image-distortion-artex",
+        "userShaderPatched": "precision mediump float;\nconst float uMood = 0.5;\nuniform float time;\nuniform float iTime;\nuniform float uTargetAspect;\nuniform float targetAspect;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform vec2 uMainImageResolution;\nuniform sampler2D uStateA;\nuniform vec2 uStateAResolution;\nuniform sampler2D uStateB;\nuniform vec2 uStateBResolution;\nuniform sampler2D uStateC;\nuniform vec2 uStateCResolution;\nuniform sampler2D uStateD;\nuniform vec2 uStateDResolution;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 uMediaTransform;\nuniform vec4 u_mediaTransform;\nuniform int uMediaTransformMainEnabled;\nuniform vec4 iDate;\nuniform vec4 iMouse;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform vec2 uLeftEye;\nuniform vec2 uRightEye;\nuniform vec2 uFaceCenter;\nuniform float uHasFace;\nuniform vec2 leftEye;\nuniform vec2 rightEye;\nuniform vec2 faceCenter;\nuniform float hasFace;\n\nuniform float uTime;\nuniform vec2 uResolution;\nuniform sampler2D uMainImage;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\nvec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }\nvec4 tex2D(sampler2D s, vec3 uv) { return texture2D(s, uv.xy); }\nvec4 tex2D(sampler2D s, vec4 uv) { return texture2D(s, uv.xy); }\n\nfloat artex_hash(vec2 p) {\n  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);\n}\n\nfloat artex_noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = artex_hash(i);\n  float b = artex_hash(i + vec2(1.0, 0.0));\n  float c = artex_hash(i + vec2(0.0, 1.0));\n  float d = artex_hash(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec2 artex_mapContainedUv(vec2 uv, vec2 sourceResolution, int applyMediaTransform) {\n  vec2 src = max(sourceResolution, vec2(1.0));\n  vec2 dst = max(iResolution.xy, vec2(1.0));\n  float srcAspect = src.x / src.y;\n  float dstAspect = dst.x / dst.y;\n\n  vec2 mediaWindow = vec2(1.0);\n  if (srcAspect > dstAspect) {\n    mediaWindow.y = dstAspect / srcAspect;\n  } else {\n    mediaWindow.x = srcAspect / dstAspect;\n  }\n\n  if (applyMediaTransform == 1) {\n    float mediaScale = max(uMediaTransform.z, 0.0001);\n    mediaWindow *= mediaScale;\n\n    vec2 centered = (uv - vec2(0.5)) / max(mediaWindow, vec2(0.0001));\n    float angle = uMediaTransform.w;\n    float sinAngle = sin(angle);\n    float cosAngle = cos(angle);\n    vec2 rotated = vec2(\n      centered.x * cosAngle - centered.y * sinAngle,\n      centered.x * sinAngle + centered.y * cosAngle\n    );\n\n    return rotated + vec2(0.5) + uMediaTransform.xy;\n  }\n\n  return (uv - vec2(0.5)) / max(mediaWindow, vec2(0.0001)) + vec2(0.5);\n}\n\nvec4 artex_sampleContained(sampler2D textureRef, vec2 uv, vec2 sourceResolution) {\n  vec2 containedUv = artex_mapContainedUv(uv, sourceResolution, 1);\n  if (\n    containedUv.x < 0.0 || containedUv.x > 1.0\n    || containedUv.y < 0.0 || containedUv.y > 1.0\n  ) {\n    return vec4(0.0);\n  }\n  return tex2D(textureRef, containedUv);\n}\n\nvec4 artex_sampleMainTexture(vec2 uv) {\n  vec2 containedUv = artex_mapContainedUv(uv, uMainImageResolution, uMediaTransformMainEnabled);\n  if (\n    containedUv.x < 0.0 || containedUv.x > 1.0\n    || containedUv.y < 0.0 || containedUv.y > 1.0\n  ) {\n    return vec4(0.0);\n  }\n  return tex2D(uMainImage, containedUv);\n}\n\nvec2 artex_applyFlow(vec2 uv) {\n  if (uFlowEnabled != 1) return uv;\n  vec2 p = uv * uFlowScale;\n  float nx = artex_noise(p + vec2(10.0, 0.0) + uTime * uFlowSpeed);\n  float ny = artex_noise(p + vec2(0.0, 10.0) + uTime * uFlowSpeed);\n  vec2 distortion = vec2(\n    (nx - 0.5) * uFlowIntensity * 0.15,\n    (ny - 0.5) * uFlowIntensity * 0.15\n  );\n  return uv + distortion;\n}\n\nvec4 artex_blendStates(vec2 uv) {\n  if (uUseStateBlending != 1) {\n    return artex_sampleMainTexture(uv);\n  }\n\n  if (uStateCount <= 1) {\n    return artex_sampleContained(uStateA, uv, uStateAResolution);\n  } else if (uStateCount == 2) {\n    vec4 stateA = artex_sampleContained(uStateA, uv, uStateAResolution);\n    vec4 stateB = artex_sampleContained(uStateB, uv, uStateBResolution);\n    return mix(stateA, stateB, uBlendFactor);\n  } else if (uStateCount == 3) {\n    if (uBlendFactor < 0.5) {\n      float t = uBlendFactor * 2.0;\n      vec4 stateA = artex_sampleContained(uStateA, uv, uStateAResolution);\n      vec4 stateB = artex_sampleContained(uStateB, uv, uStateBResolution);\n      return mix(stateA, stateB, t);\n    } else {\n      float t = (uBlendFactor - 0.5) * 2.0;\n      vec4 stateB = artex_sampleContained(uStateB, uv, uStateBResolution);\n      vec4 stateC = artex_sampleContained(uStateC, uv, uStateCResolution);\n      return mix(stateB, stateC, t);\n    }\n  } else if (uStateCount >= 4) {\n    float third = 1.0 / 3.0;\n    float twoThirds = 2.0 / 3.0;\n    if (uBlendFactor < third) {\n      float t = uBlendFactor * 3.0;\n      vec4 stateA = artex_sampleContained(uStateA, uv, uStateAResolution);\n      vec4 stateB = artex_sampleContained(uStateB, uv, uStateBResolution);\n      return mix(stateA, stateB, t);\n    } else if (uBlendFactor < twoThirds) {\n      float t = (uBlendFactor - third) * 3.0;\n      vec4 stateB = artex_sampleContained(uStateB, uv, uStateBResolution);\n      vec4 stateC = artex_sampleContained(uStateC, uv, uStateCResolution);\n      return mix(stateB, stateC, t);\n    } else {\n      float t = (uBlendFactor - twoThirds) * 3.0;\n      vec4 stateC = artex_sampleContained(uStateC, uv, uStateCResolution);\n      vec4 stateD = artex_sampleContained(uStateD, uv, uStateDResolution);\n      return mix(stateC, stateD, t);\n    }\n  }\n\n  return artex_sampleMainTexture(uv);\n}\n\nvec4 artex_sampleMain(vec2 uv) {\n  vec2 flowUv = artex_applyFlow(uv);\n  return artex_blendStates(flowUv);\n}\n\nvec4 artex_sampleMain(float uv) {\n  return artex_sampleMain(vec2(uv));\n}\n\nvec4 artex_sampleMain(vec3 uv) {\n  return artex_sampleMain(uv.xy);\n}\n\nvec4 artex_sampleMain(vec4 uv) {\n  return artex_sampleMain(uv.xy);\n}\n\nfloat hash12(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);\n}\n\nfloat noise2(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = hash12(i);\n  float b = hash12(i + vec2(1.0, 0.0));\n  float c = hash12(i + vec2(0.0, 1.0));\n  float d = hash12(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nfloat fbm4(vec2 p) {\n  float value = 0.0;\n  value += 0.5000 * noise2(p); p *= 2.0;\n  value += 0.2500 * noise2(p); p *= 2.0;\n  value += 0.1250 * noise2(p); p *= 2.0;\n  value += 0.0625 * noise2(p);\n  return value;\n}\n\nvec2 fbmField(vec2 p, float t) {\n  float n1 = fbm4(p + vec2(0.0, 0.0) + t);\n  float n2 = fbm4(p + vec2(5.2, 1.3) - t);\n  return vec2(n1, n2);\n}\n\nvoid main() {\n  vec2 resolution = max(uResolution, vec2(1.0));\n  vec2 uv = gl_FragCoord.xy / resolution;\n\n  float speed = 0.4 * max(0.05, uEffectParam1 * 2.0);\n  float distortion = 0.25 * max(0.01, uEffectParam2 * 2.0);\n  float scale = 2.5 * max(0.05, uEffectParam3 * 2.0);\n\n  vec2 p = uv;\n  p.x *= resolution.x / resolution.y;\n\n  float t = uTime * speed;\n  vec2 fieldA = fbmField(p * scale, t) * 2.0 - 1.0;\n  vec2 distortedUv = uv + fieldA * distortion;\n  vec2 fieldB = fbmField(distortedUv * scale * 1.35, t * 0.85) * 2.0 - 1.0;\n  distortedUv += fieldB * distortion * 0.35;\n\n  vec2 safeUv = clamp(distortedUv, vec2(0.001), vec2(0.999));\n  vec4 base = artex_sampleMain(safeUv);\n  float mediaPresence = smoothstep(0.0, 0.05, base.a);\n  float strength = max(0.0, uEffectStrength);\n\n  // With media: distorted artwork\n  vec3 withMedia = base.rgb * strength;\n\n  // Standalone: visualize the FBM distortion field itself\n  float fbmVal = fbm4(p * scale + t * 0.5);\n  float fbmVal2 = fbm4((p + vec2(3.7, 1.2)) * scale * 1.3 - t * 0.3);\n  vec3 standalone = vec3(\n    0.3 + 0.4 * sin(fbmVal * 8.0 + uTime * 0.3),\n    0.2 + 0.3 * sin(fbmVal2 * 6.0 + uTime * 0.5 + 2.0),\n    0.4 + 0.4 * sin((fbmVal + fbmVal2) * 5.0 + uTime * 0.2 + 4.0)\n  );\n  // Show distortion structure\n  float distortionVis = length(fieldA) + length(fieldB) * 0.5;\n  standalone += vec3(0.6, 0.4, 0.2) * distortionVis * 0.4;\n  standalone *= strength;\n\n  vec3 color = mix(standalone, withMedia, mediaPresence);\n  gl_FragColor = vec4(color, max(base.a, strength * (1.0 - mediaPresence)));\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "Kesson FBM Image Distortion ARTEX.frag",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "normal",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 2,
+        "shaderParams": {
+          "param1": 1.35,
+          "param2": 0,
+          "param3": 1.5
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": false,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 1
+      }
+    }
+  }
+}

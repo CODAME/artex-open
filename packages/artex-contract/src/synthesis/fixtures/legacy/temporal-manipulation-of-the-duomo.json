@@ -1,0 +1,261 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.322Z via scripts/extract_v1_fixtures.mjs from production piece id=88e41944-5528-4699-b3c8-79c525bdee03 (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "temporal-manipulation-of-the-duomo",
+  "sourcePieceId": "88e41944-5528-4699-b3c8-79c525bdee03",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "Temporal Manipulation of The Duomo",
+      "rendererMode": "webgl",
+      "template": "seasons",
+      "artistTemplate": "seasonal",
+      "shader_modules": [
+        {
+          "id": "color-evolution",
+          "params": {
+            "speed": 0.03,
+            "intensity": 0.28
+          }
+        },
+        {
+          "id": "depth-parallax",
+          "params": {
+            "depth": 0.18,
+            "speed": 0.05
+          }
+        }
+      ],
+      "advancedShaderModules": [
+        {
+          "id": "flow-distortion",
+          "params": {
+            "intensity": 0.06,
+            "speed": 0.2,
+            "scale": 5.8
+          }
+        },
+        {
+          "id": "color-evolution",
+          "params": {
+            "speed": 0.1,
+            "intensity": 0.05
+          }
+        }
+      ],
+      "shader": {
+        "flowIntensity": 0.012,
+        "flowSpeed": 0.06,
+        "flowScale": 5.95
+      },
+      "interactions": {
+        "simpleInteractionsEnabled": true,
+        "simpleInteractionMode": "stable",
+        "audioReactive": false,
+        "proximitySensor": false,
+        "cameraReactive": true,
+        "gestureLab": false,
+        "interactionSafeMode": true,
+        "interactionHud": true,
+        "interactionLabTarget": "both",
+        "interactionConsoleLogs": false,
+        "mediapipeGestures": false,
+        "mediapipeFaceProximity": true,
+        "mediapipeTestMode": false,
+        "interactionProfile": "stable",
+        "actionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": true,
+            "target": "both",
+            "sensitivity": "low",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": true,
+            "target": "both",
+            "sensitivity": "low",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": true,
+            "target": "shader",
+            "sensitivity": "low",
+            "cooldownMs": 1700
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": true,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 2100
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": true,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "customActionMappings": [
+          {
+            "id": "stop_open_palm",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          },
+          {
+            "id": "exit_wave",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "medium",
+            "cooldownMs": 1500
+          },
+          {
+            "id": "explosion_mouth_open",
+            "enabled": false,
+            "target": "shader",
+            "sensitivity": "medium",
+            "cooldownMs": 1400
+          },
+          {
+            "id": "celebration_clap_sound",
+            "enabled": false,
+            "target": "both",
+            "sensitivity": "high",
+            "cooldownMs": 1800
+          },
+          {
+            "id": "zoom_proximity",
+            "enabled": false,
+            "target": "media",
+            "sensitivity": "medium",
+            "cooldownMs": 0
+          }
+        ],
+        "touchMediaControls": {
+          "enabled": true,
+          "desktopFallback": "auto",
+          "resetGesture": "double-tap",
+          "baseline": {
+            "translateX": 0,
+            "translateY": 0,
+            "scale": 1,
+            "rotationDegrees": 0
+          }
+        }
+      },
+      "interaction": {
+        "supportsProximity": false,
+        "supportsAmbientLight": false,
+        "events": []
+      },
+      "evolution": {
+        "mode": "timeBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "winter",
+            "colorTemperatureShift": -0.35,
+            "noiseIntensity": 0.08,
+            "brightnessShift": -0.06
+          },
+          {
+            "startDay": 30,
+            "label": "spring",
+            "colorTemperatureShift": 0.02,
+            "noiseIntensity": 0.16,
+            "brightnessShift": 0.03
+          },
+          {
+            "startDay": 60,
+            "label": "summer",
+            "colorTemperatureShift": 0.24,
+            "noiseIntensity": 0.22,
+            "brightnessShift": 0.06
+          },
+          {
+            "startDay": 90,
+            "label": "autumn",
+            "colorTemperatureShift": 0.14,
+            "noiseIntensity": 0.18,
+            "brightnessShift": -0.02
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 0.41250000000000003,
+        "breathingEnabled": true,
+        "parallaxEnabled": true,
+        "colorShiftEnabled": true
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0.22499999999999998,
+          "breathingIntensity": 0.165,
+          "textureDrift": 0.041999999999999996
+        }
+      },
+      "mood": 0
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "verdant-synapse-web-artex",
+        "activeShaderKey": "verdant-synapse-web-artex",
+        "userShaderPatched": "// Verdant Synapse Web ARTEX.glsl\n// Inspired by glowing green membrane strands and synaptic nodes.\nprecision mediump float;\nuniform float time;\nuniform float iTime;\nuniform float uTargetAspect;\nuniform float targetAspect;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform sampler2D uMainImage;\nuniform vec2 uMainImageResolution;\nuniform sampler2D uStateA;\nuniform vec2 uStateAResolution;\nuniform sampler2D uStateB;\nuniform vec2 uStateBResolution;\nuniform sampler2D uStateC;\nuniform vec2 uStateCResolution;\nuniform sampler2D uStateD;\nuniform vec2 uStateDResolution;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 uMediaTransform;\nuniform vec4 u_mediaTransform;\nuniform int uMediaTransformMainEnabled;\nuniform vec4 iDate;\nuniform vec4 iMouse;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform vec2 uLeftEye;\nuniform vec2 uRightEye;\nuniform vec2 uFaceCenter;\nuniform float uHasFace;\nuniform vec2 leftEye;\nuniform vec2 rightEye;\nuniform vec2 faceCenter;\nuniform float hasFace;\n\nuniform float uTime;\nuniform vec2 uResolution;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\n\nfloat hash11(float p) {\n  return fract(sin(p * 93.17 + 17.13) * 43758.5453123);\n}\n\nvec2 hash21(float p) {\n  return fract(sin(vec2(p * 127.1 + 311.7, p * 269.5 + 183.3)) * 43758.5453123);\n}\n\nfloat hash12(vec2 p) {\n  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);\n}\n\nfloat noise2(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = hash12(i);\n  float b = hash12(i + vec2(1.0, 0.0));\n  float c = hash12(i + vec2(0.0, 1.0));\n  float d = hash12(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nfloat sdSegment(vec2 p, vec2 a, vec2 b) {\n  vec2 pa = p - a;\n  vec2 ba = b - a;\n  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);\n  return length(pa - ba * h);\n}\n\nvoid addGlow(inout vec3 color, vec3 ink, float a) {\n  float alpha = sat(a);\n  color = mix(color, ink, alpha * 0.24);\n  color += ink * alpha * 0.42;\n}\n\nvoid main() {\n  vec2 res = max(uResolution, vec2(1.0));\n  vec2 uv = gl_FragCoord.xy / res;\n  vec2 p = uv * 2.0 - 1.0;\n  p.x *= res.x / res.y;\n\n  float time = uTime * (0.40 + 0.75 * sat(uEffectParam2 * 0.6));\n  float density = 0.70 + 0.80 * sat(uEffectParam1 * 0.5);\n  float sparkleBoost = sat(uEffectParam3 * 0.5);\n\n  vec3 bg = mix(vec3(0.002, 0.014, 0.004), vec3(0.006, 0.030, 0.010), sat(0.50 - 0.30 * p.y));\n  vec3 color = bg;\n\n  vec2 nucleus = vec2(0.0, -0.02 + 0.04 * sin(time * 0.3));\n  vec3 webCol = vec3(0.36, 0.82, 0.30);\n  vec3 hotCol = vec3(0.82, 1.0, 0.70);\n\n  float web = 0.0;\n  float nodes = 0.0;\n\n  const int BRANCHES = 84;\n  for (int i = 0; i < BRANCHES; i++) {\n    float fi = float(i);\n    float s1 = hash11(fi * 1.73 + 1.0);\n    float s2 = hash11(fi * 3.91 + 2.0);\n    float s3 = hash11(fi * 5.27 + 3.0);\n\n    vec2 a = nucleus + vec2((s1 - 0.5) * 0.60, (s2 - 0.5) * 0.12);\n\n    float angle;\n    if (s3 < 0.62) {\n      angle = mix(0.15, 2.95, s1);\n    } else {\n      angle = mix(-2.8, -0.2, s2);\n    }\n\n    float len = mix(0.30, 1.60, pow(s2, 0.65)) * density;\n    vec2 dir = vec2(cos(angle), sin(angle));\n    vec2 b = a + dir * len;\n    b.x += 0.20 * sin(time * (0.20 + s1 * 0.45) + fi * 0.40);\n    b.y += 0.08 * cos(time * (0.18 + s2 * 0.38) + fi * 0.31);\n\n    float d = sdSegment(p, a, b);\n    float width = mix(0.0010, 0.0048, s1);\n    web += exp(-d * (240.0 / max(width * 1000.0, 1.0))) * (0.30 + 0.70 * (1.0 - s3));\n\n    float n = exp(-length(p - a) * (70.0 + 80.0 * s2));\n    nodes += n * (0.35 + 0.65 * s1);\n  }\n\n  const int CLUMPS = 10;\n  for (int i = 0; i < CLUMPS; i++) {\n    float fi = float(i);\n    float sx = hash11(fi * 4.11 + 9.0);\n    float sy = hash11(fi * 6.71 + 2.0);\n    vec2 c = vec2(mix(-1.1, 1.1, sx), mix(0.20, 0.95, sy));\n    vec2 q = p - c;\n    q.x *= mix(0.7, 1.4, hash11(fi * 2.3 + 5.0));\n    q.y *= mix(1.0, 1.8, hash11(fi * 1.5 + 7.0));\n    float blob = exp(-dot(q, q) * 3.6);\n    float grain = noise2((p + vec2(fi * 0.03, 0.0)) * (8.0 + 6.0 * density) + time * 0.08);\n    web += blob * (0.25 + 0.40 * sat(grain * 1.2));\n  }\n\n  float bottomArc = -0.42 + 0.10 * sin(p.x * 1.4 + time * 0.25);\n  float lowerMass = smoothstep(bottomArc + 0.10, bottomArc - 0.06, p.y);\n  float lowerNoise = noise2(p * (7.0 + 6.0 * density) + vec2(0.0, time * 0.12));\n  web += lowerMass * (0.25 + 0.30 * lowerNoise);\n\n  vec2 gp = (p + vec2(0.0, 0.15)) * (36.0 + 30.0 * density);\n  vec2 gid = floor(gp);\n  vec2 gv = fract(gp) - 0.5;\n  vec2 rnd = hash21(dot(gid, vec2(1.0, 57.0)));\n  float alive = step(0.80 - 0.18 * sparkleBoost, rnd.x);\n  vec2 ofs = (rnd - 0.5) * 0.40;\n  float spark = exp(-pow(length(gv - ofs) * 10.0, 2.0)) * alive;\n\n  float webSoft = sat(web * 0.22);\n  float nodeSoft = sat(nodes * 0.85);\n\n  vec3 baseWeb = webCol * webSoft;\n  vec3 nodeGlow = hotCol * nodeSoft * (0.5 + 0.4 * sparkleBoost);\n  vec3 sparkle = hotCol * spark * (0.6 + 0.9 * sparkleBoost) * (0.3 + 0.8 * webSoft);\n\n  addGlow(color, baseWeb, webSoft);\n  addGlow(color, nodeGlow, nodeSoft);\n  addGlow(color, sparkle, spark);\n\n  color = 1.0 - exp(-color * (1.20 + 0.35 * sparkleBoost));\n  color = pow(color, vec3(0.95));\n  color = mix(bg, color, sat(uEffectStrength));\n\n  gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": false,
+        "userShaderName": "Verdant Synapse Web ARTEX.glsl",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "normal",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 1,
+        "shaderParams": {
+          "param1": 1,
+          "param2": 1,
+          "param3": 1
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": true,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 0
+      }
+    }
+  }
+}

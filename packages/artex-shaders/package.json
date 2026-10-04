@@ -8,15 +8,29 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@artex/contract": "0.0.0",
     "@artex/extensions": "0.0.0"
   },
   "exports": {
     ".": "./src/index.ts",
     "./builtin-shader-library": "./src/builtinShaderLibrary.ts",
+    "./builtin-shader-authorship": "./src/builtinShaderAuthorship.ts",
     "./shared-licenses": "./src/sharedShaderLicenses.ts",
-    "./hidden-builtin-shaders": "./src/hiddenBuiltinShaders.ts"
+    "./hidden-builtin-shaders": "./src/hiddenBuiltinShaders.ts",
+    "./tsl": "./src/tsl/index.ts",
+    "./tsl-script-ids": "./src/tsl/scriptIds.ts",
+    "./reuse-licenses": "./src/reuseLicenses.ts"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0"
+    "@changesets/cli": "^3.0.3",
+    "three": "^0.186.1"
+  },
+  "peerDependencies": {
+    "three": "^0.186.1"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
   }
 }

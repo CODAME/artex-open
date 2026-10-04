@@ -31,8 +31,8 @@ parsing strategies that can eventually be extracted to a public bridge package.
 
 ## Key Reference Documents
 
-- `ARCHITECTURE.md §Experimental Tracks`
-- `ARTEX_EVALS_PLAN.md` — evaluation criteria for TD import quality
+- `docs/architecture.md §Experimental tracks`
+- `docs/artex-evals-plan.md` — evaluation criteria for TD import quality
 
 ---
 

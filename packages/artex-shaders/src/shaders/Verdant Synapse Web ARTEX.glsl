@@ -1,6 +1,7 @@
 // Verdant Synapse Web ARTEX.glsl
 // Inspired by glowing green membrane strands and synaptic nodes.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float iTime;
 uniform float uTargetAspect;

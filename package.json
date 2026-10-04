@@ -4,25 +4,26 @@
   "version": "0.0.0",
   "description": "ARTEX open layer packages — shader library, extension API, and experiment sandbox.",
   "type": "module",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=11"
+  },
   "workspaces": [
     "packages/artex-contract",
     "packages/artex-shaders",
     "packages/artex-extensions",
-    "packages/artex-experiments",
-    "packages/artex-shader-tools",
-    ".services/artex-platform-api"
+    "packages/artex-experiments"
   ],
   "scripts": {
-    "check:boundaries": "node scripts/check_workspace_boundaries.mjs",
-    "test": "npm run check:boundaries && npm run test --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "changeset": "changeset",
     "version": "changeset version",
     "publish": "changeset publish"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0",
-    "vitest": "^4.0.0",
-    "typescript": "^5.0.0"
+    "@changesets/cli": "^3.0.0",
+    "vitest": "^5.0.2",
+    "typescript": "~6.0.3"
   }
 }

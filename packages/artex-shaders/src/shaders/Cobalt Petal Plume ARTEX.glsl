@@ -1,6 +1,7 @@
 // Cobalt Petal Plume ARTEX.glsl
 // Inspired by a luminous blue floral plume with particulate spray.
 precision mediump float;
+const float uMood = 0.5;
 uniform float time;
 uniform float iTime;
 uniform float uTargetAspect;

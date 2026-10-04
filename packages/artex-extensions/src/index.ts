@@ -1,7 +1,13 @@
+import type { SignalSnapshot } from "@artex/contract";
+
 export type ExtensionCapability =
   | "shader:register"
   | "media-input:register"
-  | "sandbox:register";
+  | "text-source:register"
+  | "sandbox:register"
+  | "block:register"
+  | "asset:read"
+  | "secret:read";
 
 export interface BaseExtensionDefinition {
   id: string;
@@ -20,9 +26,102 @@ export interface MediaInputAdapterDefinition extends BaseExtensionDefinition {
   adapterKey: string;
 }
 
+export interface TextSourceAdapterDefinition extends BaseExtensionDefinition {
+  kind: "text-source";
+  adapterKey: string;
+}
+
 export interface SandboxModuleDefinition extends BaseExtensionDefinition {
   kind: "sandbox";
   mountKey: string;
+}
+
+// ---------------------------------------------------------------------------
+// Block player — composition block dispatch contract (v0: Tier-1 same-origin)
+// ---------------------------------------------------------------------------
+
+/**
+ * Size data the host hands to a block player at mount and on resize.
+ * Pixel size = `width * dpr` × `height * dpr`.
+ */
+export interface BlockPlayerSize {
+  width: number;
+  height: number;
+  dpr: number;
+}
+
+/**
+ * Runtime context handed to a block player at mount.
+ *
+ * Optional fields are capability-gated: the host omits them entirely when the
+ * plugin's manifest does not declare the matching capability. Plugins that need
+ * an optional field must declare its capability in their manifest.
+ */
+export interface BlockPlayerContext {
+  /** PluginRecord.id this instance is running under. */
+  pluginId: string;
+  /** PluginBlockConfig.pluginConfig — opaque to the host, validated by the plugin. */
+  pluginConfig: Record<string, unknown>;
+  /** Live signal ref. Plugins read `current` each frame. May be null when no signals are wired. */
+  signalSnapshotRef: { readonly current: SignalSnapshot | null };
+  /** Plugin-scoped log. Routes to console with a `[plugin:<id>]` prefix. */
+  log: (...args: unknown[]) => void;
+  /** Structured error reporting. Surfaces in Studio's diagnostics drawer. */
+  reportError: (error: unknown) => void;
+  /** Initial size. Pixel dimensions = `width * dpr` × `height * dpr`. */
+  width: number;
+  height: number;
+  dpr: number;
+  /**
+   * Subscribe to host-driven resize events. The plugin should re-bind any
+   * GL viewport / canvas dimensions on each call. Returns an unsubscribe.
+   */
+  onResize: (cb: (size: BlockPlayerSize) => void) => () => void;
+  /**
+   * Per-plugin secret lookup. Present only when the plugin declares
+   * `secret:read`. Returns undefined when the secret is unset.
+   */
+  getSecret?: (name: string) => string | undefined;
+  /**
+   * Resolves an asset id from the piece's package to a usable URL. Present
+   * only when the plugin declares `asset:read` AND the block's
+   * `assetReferences[]` listed the id. Returns null when not found.
+   */
+  getAsset?: (assetId: string) => Promise<string | null>;
+}
+
+/**
+ * Handle returned by `BlockPlayerDefinition.mount()`. The host calls
+ * `unmount()` when the block is removed, the piece changes, or the host
+ * tears down. The plugin must release every resource it owns
+ * (rAF handles, GL contexts, sockets, listeners).
+ */
+export interface BlockPlayerInstance {
+  unmount: () => void;
+}
+
+/**
+ * Block-player extension definition.
+ *
+ * Plugins register one of these via `extensionHost.registerBlockPlayer()` to
+ * provide a custom renderer for `PluginBlockConfig` blocks. The runtime
+ * resolves a piece's `block.config.pluginId` against `blockKey` to dispatch.
+ *
+ * v0 contract: Tier-1 same-origin only. Plugin code is loaded from the host
+ * bundle (compile-time `import` of the plugin's npm package); the
+ * `PluginRecord` admin-approval gate is the trust boundary.
+ */
+export interface BlockPlayerDefinition extends BaseExtensionDefinition {
+  kind: "block";
+  /** Stable key the runtime resolves PluginBlockConfig.pluginId against. */
+  blockKey: string;
+  /**
+   * Imperative mount. Synchronous: returns the lifecycle handle immediately.
+   * Async setup (asset fetches, model loads, network) runs after mount; the
+   * plugin is responsible for rendering a placeholder or empty frame until
+   * its setup completes.
+   */
+  mount: (container: HTMLElement, context: BlockPlayerContext) => BlockPlayerInstance;
 }
 
 // ---------------------------------------------------------------------------
@@ -42,7 +141,11 @@ export interface MediaInputFrame {
   bassLevel: number;
   /** Short transient energy (claps, snaps) — feeds uTransientLevel. */
   transientLevel?: number;
-  /** Camera-brightness signal — feeds uCameraLevel when camera is enabled. */
+  /**
+   * Movement energy, the real frame-to-frame change in the camera picture
+   * (0 still, 1 a lot of movement). Not brightness, presence or gesture
+   * activity: it feeds uCameraLevel on every surface (#4795).
+   */
   cameraLevel?: number;
   /** Viewer proximity, 0 = far / absent, 1 = very close — feeds uProximity. */
   proximity?: number;
@@ -75,6 +178,44 @@ export interface MediaInputAdapter {
    * Returns a cleanup function; call it to unsubscribe.
    */
   onFrame(callback: (frame: MediaInputFrame) => void): () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Text source — owner-supplied phrases for text-driven experiences
+// ---------------------------------------------------------------------------
+
+/**
+ * Contract for a pluggable text source.
+ *
+ * A text source supplies short phrases to text-driven experiences (particle
+ * typography, poetry clocks, message walls). Where the phrases come from is
+ * the adapter's concern: a static list from device setup, an owner's HTTP
+ * feed, a webhook inbox. See docs/personal-text-sources-proposal.md for the
+ * source taxonomy and privacy model — personal phrases are resolved at play
+ * time on the owner's device and never enter the published artwork snapshot.
+ *
+ * The host calls `start()` when a consuming piece begins playback and
+ * `stop()` when it ends. Adapters emit the *complete current phrase list*
+ * on every refresh (not deltas); consumers decide ordering and cadence.
+ */
+export interface TextSourceAdapter {
+  /** Stable, URL-safe identifier — e.g. "static-list", "http-poll". */
+  id: string;
+  /** Human-readable name shown in configuration UIs. */
+  label: string;
+  /**
+   * Begin delivering phrases. Resolves once the adapter is ready to fire
+   * `onPhrases` callbacks. Rejecting signals the host that the source could
+   * not start (consumers fall back to their own authored phrases).
+   */
+  start(): Promise<void>;
+  /** Release resources and stop all phrase callbacks. */
+  stop(): void;
+  /**
+   * Register a phrase-list callback, fired on start and on every refresh
+   * with the full current list. Returns a cleanup function to unsubscribe.
+   */
+  onPhrases(callback: (phrases: readonly string[]) => void): () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +275,9 @@ export const createExtensionHost = ({ allowedCapabilities }: ExtensionHostOption
   const allowed = new Set(allowedCapabilities);
   const shaders = new Map<string, Readonly<ShaderExtensionDefinition>>();
   const mediaInputs = new Map<string, Readonly<MediaInputAdapterDefinition>>();
+  const textSources = new Map<string, Readonly<TextSourceAdapterDefinition>>();
   const sandboxModules = new Map<string, Readonly<SandboxModuleDefinition>>();
+  const blockPlayers = new Map<string, Readonly<BlockPlayerDefinition>>();
 
   const requireCapability = (capability: ExtensionCapability): void => {
     if (!allowed.has(capability)) {
@@ -173,6 +316,16 @@ export const createExtensionHost = ({ allowedCapabilities }: ExtensionHostOption
       mediaInputs.set(definition.id, Object.freeze({ ...definition, capabilities: cloneCapabilities(definition.capabilities) }));
     },
 
+    registerTextSource(definition: TextSourceAdapterDefinition): void {
+      requireCapability("text-source:register");
+      assertBaseDefinition(definition, "text-source:register");
+      if (textSources.has(definition.id)) {
+        throw new ExtensionRegistrationError(`Text source adapter ${definition.id} is already registered.`);
+      }
+      assertNonEmpty(definition.adapterKey, "Text source adapter key");
+      textSources.set(definition.id, Object.freeze({ ...definition, capabilities: cloneCapabilities(definition.capabilities) }));
+    },
+
     registerSandboxModule(definition: SandboxModuleDefinition): void {
       requireCapability("sandbox:register");
       assertBaseDefinition(definition, "sandbox:register");
@@ -183,6 +336,26 @@ export const createExtensionHost = ({ allowedCapabilities }: ExtensionHostOption
       sandboxModules.set(definition.id, Object.freeze({ ...definition, capabilities: cloneCapabilities(definition.capabilities) }));
     },
 
+    registerBlockPlayer(definition: BlockPlayerDefinition): void {
+      requireCapability("block:register");
+      assertBaseDefinition(definition, "block:register");
+      if (blockPlayers.has(definition.id)) {
+        throw new ExtensionRegistrationError(`Block player ${definition.id} is already registered.`);
+      }
+      assertNonEmpty(definition.blockKey, "Block player key");
+      if (typeof definition.mount !== "function") {
+        throw new ExtensionRegistrationError(`Block player ${definition.id} must provide a mount function.`);
+      }
+      for (const existing of blockPlayers.values()) {
+        if (existing.blockKey === definition.blockKey) {
+          throw new ExtensionRegistrationError(
+            `Block player key ${definition.blockKey} is already registered by ${existing.id}.`,
+          );
+        }
+      }
+      blockPlayers.set(definition.id, Object.freeze({ ...definition, capabilities: cloneCapabilities(definition.capabilities) }));
+    },
+
     listShaderExtensions(): readonly Readonly<ShaderExtensionDefinition>[] {
       return [...shaders.values()];
     },
@@ -191,8 +364,16 @@ export const createExtensionHost = ({ allowedCapabilities }: ExtensionHostOption
       return [...mediaInputs.values()];
     },
 
+    listTextSources(): readonly Readonly<TextSourceAdapterDefinition>[] {
+      return [...textSources.values()];
+    },
+
     listSandboxModules(): readonly Readonly<SandboxModuleDefinition>[] {
       return [...sandboxModules.values()];
+    },
+
+    listBlockPlayers(): readonly Readonly<BlockPlayerDefinition>[] {
+      return [...blockPlayers.values()];
     },
   };
 };

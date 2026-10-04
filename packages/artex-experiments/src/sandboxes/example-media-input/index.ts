@@ -59,7 +59,7 @@ export class OscillatorMediaAdapter implements MediaInputAdapter {
       // Leaving cameraLevel and proximity empty, as this only simulates audio
     };
 
-    this.callbacks.forEach((cb) => cb(frame));
+    this.callbacks.forEach((cb) => { cb(frame); });
 
     this.animFrame = requestAnimationFrame(this.tick);
   };

@@ -1,0 +1,144 @@
+{
+  "$comment": "Extracted 2026-05-03T20:08:34.320Z via scripts/extract_v1_fixtures.mjs from production piece id=9339c63b-8db1-4d13-a88d-6a5988dadd9b (collection=projects). Sanitized — only synthesizer-relevant fields preserved.",
+  "slug": "call-into-being",
+  "sourcePieceId": "9339c63b-8db1-4d13-a88d-6a5988dadd9b",
+  "sourceCollection": "projects",
+  "kind": "v2-shader",
+  "envelope": {
+    "artwork": {
+      "version": 1,
+      "title": "Call into Being",
+      "rendererMode": "webgl",
+      "template": "none",
+      "artistTemplate": "breathing",
+      "shader_modules": [
+        {
+          "id": "flow-distortion",
+          "params": {
+            "intensity": 0.06080000000000001,
+            "speed": 0.20320000000000002,
+            "scale": 7.392
+          }
+        },
+        {
+          "id": "color-evolution",
+          "params": {
+            "speed": 0.0368,
+            "intensity": 0.1248
+          }
+        },
+        {
+          "id": "depth-parallax",
+          "params": {
+            "depth": 0.2632,
+            "speed": 0.0864
+          }
+        }
+      ],
+      "advancedShaderModules": [],
+      "shader": {
+        "flowIntensity": 0.06288,
+        "flowSpeed": 0.22088000000000002,
+        "flowScale": 6.616999999999999
+      },
+      "interactions": {
+        "audioReactive": false,
+        "proximitySensor": false,
+        "cameraReactive": false,
+        "gestureLab": false
+      },
+      "interaction": {
+        "supportsProximity": false,
+        "supportsAmbientLight": false,
+        "events": []
+      },
+      "evolution": {
+        "mode": "eventBased",
+        "durationDays": 0,
+        "phases": [
+          {
+            "startDay": 0,
+            "label": "breathe",
+            "colorTemperatureShift": -0.0696,
+            "noiseIntensity": 0.088,
+            "brightnessShift": -0.013199999999999996
+          },
+          {
+            "startDay": 23,
+            "label": "settle",
+            "colorTemperatureShift": 0.09040000000000001,
+            "noiseIntensity": 0.1904,
+            "brightnessShift": 0.0296
+          }
+        ]
+      },
+      "animation": {
+        "baseSpeed": 0.6786000000000001,
+        "breathingEnabled": true,
+        "parallaxEnabled": true,
+        "colorShiftEnabled": true
+      },
+      "layers": {
+        "base": {
+          "parallaxDepth": 0.22352,
+          "breathingIntensity": 0.27872,
+          "textureDrift": 0.08064
+        }
+      },
+      "mood": 0.28
+    },
+    "projectData": {
+      "version": 1,
+      "shader": {
+        "builtinShaderId": "golden-electric-spiral-artex",
+        "activeShaderKey": "golden-electric-spiral-artex",
+        "userShaderPatched": "// Golden Electric Spiral ARTEX — Electric spiral distortion on artwork\n// Rewritten for ARTEX compositing.\nprecision mediump float;\nuniform float uTime;\nuniform float time;\nuniform float uTargetAspect;\nuniform float targetAspect;\nuniform vec2 uMainImageResolution;\nuniform vec2 uStateAResolution;\nuniform vec2 uStateBResolution;\nuniform vec2 uStateCResolution;\nuniform vec2 uStateDResolution;\nuniform vec4 uMediaTransform;\nuniform vec4 u_mediaTransform;\nuniform int uMediaTransformMainEnabled;\nuniform vec4 iMouse;\nuniform vec2 uLeftEye;\nuniform vec2 uRightEye;\nuniform vec2 uFaceCenter;\nuniform float uHasFace;\nuniform vec2 leftEye;\nuniform vec2 rightEye;\nuniform vec2 faceCenter;\nuniform float hasFace;\nuniform float iTime;\nuniform vec2 uResolution;\nuniform vec3 iResolution;\nuniform vec3 iChannelResolution[4];\nuniform sampler2D uMainImage;\nuniform sampler2D uStateA;\nuniform sampler2D uStateB;\nuniform sampler2D uStateC;\nuniform sampler2D uStateD;\nuniform sampler2D uMask;\nuniform sampler2D uState1;\nuniform sampler2D uState2;\nuniform int uUseStateBlending;\nuniform float uBlendFactor;\nuniform int uStateCount;\nuniform int uFlowEnabled;\nuniform float uFlowIntensity;\nuniform float uFlowSpeed;\nuniform float uFlowScale;\nuniform vec4 iDate;\nuniform float uAudioLevel;\nuniform float uBassLevel;\nuniform float uProximity;\nuniform float uCameraLevel;\nuniform float uEffectStrength;\nuniform float uEffectParam1;\nuniform float uEffectParam2;\nuniform float uEffectParam3;\n\n// --- ARTEX helpers ---\nvec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }\n\nfloat artex_hash(vec2 p) {\n  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);\n}\n\nfloat artex_noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  float a = artex_hash(i);\n  float b = artex_hash(i + vec2(1.0, 0.0));\n  float c = artex_hash(i + vec2(0.0, 1.0));\n  float d = artex_hash(i + vec2(1.0, 1.0));\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nvec2 artex_applyFlow(vec2 uv) {\n  if (uFlowEnabled != 1) return uv;\n  vec2 p = uv * uFlowScale;\n  float nx = artex_noise(p + vec2(10.0, 0.0) + uTime * uFlowSpeed);\n  float ny = artex_noise(p + vec2(0.0, 10.0) + uTime * uFlowSpeed);\n  return uv + vec2((nx - 0.5), (ny - 0.5)) * uFlowIntensity * 0.15;\n}\n\nvec4 artex_blendStates(vec2 uv) {\n  if (uUseStateBlending != 1) return tex2D(uMainImage, uv);\n  if (uStateCount <= 1) return tex2D(uStateA, uv);\n  if (uStateCount == 2) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor);\n  if (uStateCount == 3) {\n    if (uBlendFactor < 0.5) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 2.0);\n    return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - 0.5) * 2.0);\n  }\n  float t3 = 1.0 / 3.0;\n  if (uBlendFactor < t3) return mix(tex2D(uStateA, uv), tex2D(uStateB, uv), uBlendFactor * 3.0);\n  if (uBlendFactor < t3 * 2.0) return mix(tex2D(uStateB, uv), tex2D(uStateC, uv), (uBlendFactor - t3) * 3.0);\n  return mix(tex2D(uStateC, uv), tex2D(uStateD, uv), (uBlendFactor - t3 * 2.0) * 3.0);\n}\n\nvec4 artex_sampleMain(vec2 uv) {\n  return artex_blendStates(artex_applyFlow(uv));\n}\n\n// --- Electric spiral ---\nfloat seg(vec2 p, vec2 a, vec2 b) {\n  vec2 pa = p - a, ba = b - a;\n  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);\n  return length(pa - ba * h);\n}\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord) {\n  vec2 baseUv = fragCoord / uResolution.xy;\n  vec2 uv = (fragCoord - 0.5 * uResolution.xy) / uResolution.y;\n\n  float a = atan(uv.y, uv.x);\n  float t = uTime * uEffectParam1;\n  vec2 p = cos(a + t) * vec2(cos(0.5 * t), sin(0.3 * t));\n\n  float d1 = length(uv - p);\n  float d2 = length(uv);\n  float denom = max(d1 + d2, 1e-4);\n  vec2 uv2 = 2.0 * cos(log(max(length(uv), 1e-4)) * 0.25 - 0.5 * t + log(vec2(d1, d2) / denom));\n\n  // Grid pattern from spiral coords\n  vec2 fpos = fract(4.0 * uv2) - 0.5;\n  float grid = max(abs(fpos.x), abs(fpos.y));\n  float k = 5.0 / uResolution.y;\n  float gridMask = smoothstep(-k, k, 0.25 - grid);\n\n  // Electric rings\n  float ringFreq = 10.0 * max(1.0, uEffectParam2 * 2.0);\n  float ring = cos(ringFreq * length(uv2) + 4.0 * t);\n  float electricMask = exp(-9.0 * abs(cos(9.0 * a + t) * uv.x + sin(9.0 * a + t) * uv.y + 0.1 * ring));\n\n  // Sample artwork at its true UV — no resizing\n  vec4 artwork = artex_sampleMain(baseUv);\n  float mediaPresence = smoothstep(0.0, 0.05, artwork.a);\n\n  float strength = clamp(uEffectStrength * max(0.01, uEffectParam3 * 1.5), 0.0, 1.0);\n\n  // Warm golden tint from spiral pattern\n  vec3 goldenTint = vec3(1.0, 0.85, 0.5);\n  vec3 electricTint = vec3(0.5, 1.0, 1.0);\n\n  // Standalone visual: dark background with golden grid and electric arcs\n  vec3 standalone = vec3(0.02, 0.01, 0.04);\n  standalone = mix(standalone, goldenTint * 0.5, gridMask * strength * 0.6);\n  standalone += electricTint * (0.5 + 0.5 * ring) * electricMask * strength * 0.5;\n\n  // With-media composite: artwork + golden grid overlay + electric arcs\n  vec3 withMedia = artwork.rgb;\n  withMedia = mix(withMedia, withMedia * goldenTint * 1.3, gridMask * strength * 0.6);\n  withMedia += electricTint * (0.5 + 0.5 * ring) * electricMask * strength * 0.4;\n\n  vec3 col = mix(standalone, withMedia, mediaPresence);\n\n  // Central glow from spiral focus\n  float coshVal = 0.5 * (exp(2.5 * (d1 + d2)) + exp(-2.5 * (d1 + d2)));\n  float centralGlow = 1.0 / max(coshVal, 1e-4);\n  col += vec3(1.0, 0.5, 0.1) * centralGlow * strength * 0.3;\n\n  // Audio: electric intensity pulses with audio\n  col += electricTint * electricMask * uAudioLevel * 0.25 * strength;\n\n  fragColor = vec4(col, max(artwork.a, strength * (1.0 - mediaPresence)));\n}\n\nvoid main() {\n  vec4 fragColor;\n  mainImage(fragColor, gl_FragCoord.xy);\n  gl_FragColor = fragColor;\n}\n",
+        "userShaderChanges": [],
+        "userShaderEnabled": true,
+        "userShaderName": "Golden Electric Spiral ARTEX.frag",
+        "shaderMix": 0.5,
+        "shaderBlendMode": "softlight",
+        "shaderMaskSource": "none",
+        "shaderMaskChannel": "alpha",
+        "shaderMaskThreshold": 0.5,
+        "shaderMaskSoftness": 0.15,
+        "shaderMaskInvert": false,
+        "shaderLinearColor": false,
+        "shaderPremultipliedAlpha": false,
+        "shaderTemporalSmoothing": 0,
+        "shaderEffectStrength": 0,
+        "shaderParams": {
+          "param1": 1.6,
+          "param2": 1.65,
+          "param3": 1.65
+        },
+        "shaderInteractionMode": "manual",
+        "shaderInteractionPreset": "balanced",
+        "shaderDialect": "artex"
+      },
+      "shaderChannels": {
+        "paths": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sources": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      "runtime": {
+        "useCameraAsArtwork": false,
+        "artworkImageEnabled": true,
+        "cameraPreviewVisible": false,
+        "cameraPreviewMirrored": false,
+        "showWebcamPreview": false,
+        "showTestWindows": false,
+        "timeScale": 1
+      }
+    }
+  }
+}

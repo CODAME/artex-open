@@ -20,6 +20,10 @@ ARTEX is currently in an invited-core-dev collaboration stage.
 
 Do not bypass package boundaries by importing source files across package roots. Run `npm run check:boundaries` before opening a PR.
 
+## Local development
+
+Run `./scripts/dev.sh` from any worktree to start `apps/creator` on a stable `http://localhost:5173/` (it stops any previous server first). Pass `runtime` to start `apps/runtime` on `:5174` instead.
+
 ## Contribution Model
 
 - Shared layers are licensed under Apache 2.0.
