@@ -5,6 +5,8 @@
   "type": "module",
   "license": "Apache-2.0",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./echo-workflow": "./src/sandboxes/echo-workflow/index.ts",
+    "./echo-workflow/*": "./src/sandboxes/echo-workflow/*"
   }
 }

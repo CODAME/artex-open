@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101311">
+  <meta name="robots" content="noindex,nofollow">
+  <title>ARTEX — Echo playground</title>
+  <meta name="description" content="An interactive experiment in temporal art. Explore four delayed shader taps and a p5.js circular buffer side by side.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101311'/%3E%3Ccircle cx='25' cy='32' r='16' fill='none' stroke='%23ccff75' stroke-width='4'/%3E%3Ccircle cx='39' cy='32' r='16' fill='none' stroke='%23ccff75' stroke-width='4' opacity='.45'/%3E%3C/svg%3E">
+  <!--ECHO_STYLE-->
+  <!--ECHO_P5-->
+  <!--ECHO_APP-->
+</head>
+<body>
+  <header class="topbar"><a class="wordmark" href="#">ARTEX<span class="mark">✳</span></a><span class="top-label">EXPERIMENTS IN LIVING ART</span><span class="private"><span></span> Echo Lab sandbox</span></header>
+  <main>
+    <section class="intro" aria-labelledby="title">
+      <div><div class="eyebrow"><span class="small-line"></span> THE ECHO PLAYGROUND <span class="edition">001</span></div><h1 id="title">Make time <em>visible.</em></h1><p>A moment becomes a material. Pull it from the past,<br class="desktop-break"> layer it into the present, and see what emerges.</p></div>
+      <div class="intro-note"><span class="orbit-icon" aria-hidden="true">◉</span><div>One input. Two approaches.<br><span>A shader with four taps meets a buffer you control.</span></div></div>
+    </section>
+    <section class="lab" aria-label="Interactive Echo playground">
+      <div class="lab-toolbar"><div class="input-choice" role="group" aria-label="Visual input"><button id="demo" class="selected" aria-pressed="true">◌ Animated scene</button><button id="camera" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="5" width="11" height="10" rx="2"/><path d="m13 8 5-3v10l-5-3"/></svg> Use camera</button></div><div class="transport"><span class="live-status" id="play-status"><i></i> LIVE <span>24 captures per second</span></span><button id="pause" class="primary" aria-pressed="false">Ⅱ Pause</button></div></div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div class="workspace">
+        <div class="visuals">
+          <div class="view-grid">
+            <article class="view"><div class="view-title"><h2><span>01</span> ARTEX Echo</h2><span id="echo-engine" class="engine">WebGPU shader</span></div><div class="canvas-wrap" id="echo-wrap"><canvas id="echo" width="640" height="400" aria-label="Echo shader output"></canvas><div class="canvas-overlay"><span>ECHO</span><span id="echo-delay">4 TEMPORAL TAPS</span></div></div><div class="view-footer"><span><i class="dot lime"></i> Managed frame history</span><span id="echo-state">Warming up</span></div></article>
+            <article class="view"><div class="view-title"><h2><span>02</span> p5.js buffer</h2><span class="engine">p5.Graphics</span></div><div class="canvas-wrap" id="p5-wrap"><div id="p5-output"></div><div class="canvas-overlay"><span>CIRCULAR BUFFER</span><span id="p5-delay">4 TEMPORAL TAPS</span></div></div><div class="view-footer"><span><i class="dot violet"></i> Artist-managed history</span><span id="p5-state">Loading p5.js</span></div></article>
+          </div>
+          <div class="history-header"><div><span class="eyebrow">INSIDE THE ECHO</span><span class="history-hint">Tap a frame to include or exclude it.</span></div><span id="buffer-status" class="mono">0 frames stored</span></div>
+          <div class="tap-grid">
+            <button class="tap active" data-tap="0" aria-pressed="true" aria-label="Include delayed frame tap 1"><canvas width="160" height="100"></canvas><div><span><i></i> Tap 1</span><span class="tap-age">−6f</span></div><code>u_delayed_frame</code></button>
+            <button class="tap active" data-tap="1" aria-pressed="true" aria-label="Include delayed frame tap 2"><canvas width="160" height="100"></canvas><div><span><i></i> Tap 2</span><span class="tap-age">−12f</span></div><code>u_delayed_frame_2</code></button>
+            <button class="tap active" data-tap="2" aria-pressed="true" aria-label="Include delayed frame tap 3"><canvas width="160" height="100"></canvas><div><span><i></i> Tap 3</span><span class="tap-age">−18f</span></div><code>u_delayed_frame_3</code></button>
+            <button class="tap active" data-tap="3" aria-pressed="true" aria-label="Include delayed frame tap 4"><canvas width="160" height="100"></canvas><div><span><i></i> Tap 4</span><span class="tap-age">−24f</span></div><code>u_delayed_frame_4</code></button>
+          </div>
+          <div class="buffer-line"><span>PAST</span><div class="timeline" id="timeline"><div class="time-window"></div><i data-marker="3"></i><i data-marker="2"></i><i data-marker="1"></i><i data-marker="0"></i></div><span>NOW</span></div>
+          <div class="p5-mode"><div><strong>Go beyond four taps.</strong><span>Keep the settings matched, or let p5.js sample more history.</span></div><button id="extended" aria-pressed="false">Explore 12 taps <span>↗</span></button></div>
+          <div id="extended-controls" class="extended-controls" hidden><label for="p5-taps">p5.js taps <output id="p5-taps-value">12</output><input id="p5-taps" type="range" min="1" max="12" value="12"></label><label for="p5-span">p5.js history span <output id="p5-span-value">144f</output><input id="p5-span" type="range" min="12" max="192" value="144"></label><p>The Echo view keeps your original settings. p5.js now uses its own tap count and depth, with the shared blend and offset.</p></div>
+        </div>
+        <aside class="controls" aria-label="Echo controls">
+          <div class="control-title"><h2>Shape the echo</h2><button id="reset" title="Restore default controls">Reset <span>↺</span></button></div>
+          <div class="preset-label">START WITH A FEELING</div><div class="presets" role="group" aria-label="Echo presets"><button data-preset="clean">Clean</button><button data-preset="ghosts" class="selected" aria-pressed="true">Ghosts</button><button data-preset="timefold">Timefold</button></div>
+          <div class="control"><label for="count">Capture count <output id="count-value">4 taps</output></label><input id="count" type="range" min="1" max="4" step="1" value="4"><div class="ticks"><span>1</span><span>2</span><span>3</span><span>4</span></div><p>How many delayed frames enter the mix.</p><code>u_capture_count</code></div>
+          <div class="control"><label for="blend">Blend <output id="blend-value">68%</output></label><input id="blend" type="range" min="0" max="100" step="1" value="68"><div class="ticks"><span>Present</span><span>Past</span></div><p>The balance of live input and delayed frames.</p><code>u_blend</code></div>
+          <div class="control"><label for="depth">Depth <output id="depth-value">24f · 1.00s</output></label><input id="depth" type="range" min="4" max="96" step="1" value="24"><p>Spread the taps across a longer memory.</p></div>
+          <div class="control"><label for="offset">Offset <output id="offset-value">0f · 0.00s</output></label><input id="offset" type="range" min="0" max="48" step="1" value="0"><p>Push the whole sampling window further back.</p></div>
+          <button id="clear" class="clear"><span>⟲</span> Clear frame history</button>
+          <details class="recipe-editor"><summary>Edit settings as JSON</summary><label for="recipe-json">Echo settings</label><textarea id="recipe-json" spellcheck="false"></textarea><button id="apply-recipe">Apply settings</button><p id="recipe-status" role="status">Changes stay in this session.</p></details>
+          <p class="control-foot" id="input-foot">Move across either scene to steer the light.<br>Camera is optional and stays on your device.</p>
+        </aside>
+      </div>
+    </section>
+    <section class="comparison" aria-labelledby="comparison-title">
+      <div class="comparison-intro"><span class="eyebrow">TWO WAYS TO REMEMBER</span><h2 id="comparison-title">Same idea.<br>Different freedom.</h2><p>Start from an Echo piece in ARTEX for ready-bound history. Choose p5.js when your artwork needs custom frame-by-frame logic.</p><span class="prototype-note">Standalone workflow demonstration.<br>Not connected to your ARTEX Studio.</span></div>
+      <div class="comparison-body"><table><thead><tr><th scope="col">Workflow</th><th scope="col">ARTEX Echo</th><th scope="col">p5.js circular buffer</th></tr></thead><tbody><tr><th scope="row">Frame history</th><td>Provided by the Echo host</td><td>Your array of p5.Graphics</td></tr><tr><th scope="row">Delayed taps</th><td>Up to four bound textures</td><td>Your count, spacing and logic</td></tr><tr><th scope="row">Creative starting point</th><td>Edit an Echo library shader</td><td>Write a p5.js sketch</td></tr><tr><th scope="row">In this playground</th><td>WebGPU weighted texture mix</td><td>p5.js, additive frame mix</td></tr></tbody></table>
+        <details class="code-details"><summary>See the reference shader and buffer logic <span>+</span></summary><div class="code-tabs" role="group" aria-label="Code example"><button id="shader-tab" class="selected" aria-pressed="true">Echo fragment</button><button id="p5-tab" aria-pressed="false">p5.js sketch</button><button id="copy">Copy code</button></div><pre><code id="code-content"></code></pre><p id="code-note"></p><a id="download" href="/echo.frag" download>Download example ↓</a></details>
+        <details class="mapping"><summary>How time is mapped in this prototype <span>+</span></summary><p>Both paths capture the same 320 × 200 input at 24 fps. Tap <var>i</var> samples <code>offset + round(i × depth / captureCount)</code> frames ago, with <var>i</var> starting at 1. Enabled taps are averaged, then mixed with the present using Blend. Missing history uses the oldest available frame; with no history, the present is shown.</p><p>Echo stores up to 145 frames. The p5.js buffer stores up to 241 frames and wraps its write index; its extended mode allows 12 taps across 192 frames. This is an illustrative control mapping, not a claim about ARTEX's internal delay formula. More taps and longer histories remain limited by device memory.</p><p><a href="https://p5js.org/reference/p5/createGraphics/" target="_blank" rel="noopener">p5.Graphics reference ↗</a><a href="https://p5js.org/reference/p5/createCapture/" target="_blank" rel="noopener">Camera capture reference ↗</a></p></details>
+      </div>
+    </section>
+  </main>
+  <footer><span>ARTEX <span class="muted">A medium for living digital art.</span></span><span>Experiment. Observe. Begin again.</span></footer>
+  <video id="video" muted playsinline hidden></video>
+</body>
+</html>

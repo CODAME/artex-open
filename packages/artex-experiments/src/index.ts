@@ -37,3 +37,5 @@ export * from "./sandboxes/three-renderer/index.js";
 export * from "./sandboxes/touchdesigner-bridge/index.js";
 export * from "./sandboxes/example-media-input/index.js";
 export * from "./sandboxes/ghost-font/index.js";
+
+export * from "./sandboxes/echo-workflow/index.js";
