@@ -275,6 +275,11 @@ export type ArtexNotificationType =
   | "association_claim_declined"
   /** An org credited this account on one of its records; removable from the profile (#4780). */
   | "org_credit_added"
+  // An imported work moving to the artist who claimed it, and an org taking one
+  // back (docs/imported-work-transfer-on-claim.md).
+  | "work_transfer_proposed"
+  | "work_transfer_approved"
+  | "work_transfer_returned"
   | "credit_proposal"
   | "credit_accepted"
   | "credit_amended"
