@@ -150,6 +150,13 @@ vec4 artex_sampleMain(vec4 uv) {
 // Tips:
 // - Set uMainImage to "Clamp" (not repeat) for best borders.
 // - Works best with non-noisy images (or increase the smoothing taps).
+//
+// Compile cost (#3842): on Windows, ANGLE hands this to Microsoft's FXC,
+// which inlines every call site. sdf() carries the 9-tap image blur, so each
+// call site costs nine full artex_sampleMain copies. The blur is a loop and
+// every distance query of the frame (march, normal, shadow, AO) goes through
+// the single sdf() call in traceScene(), so FXC compiles the blur once. The
+// arithmetic and its order are unchanged; only the call structure moved.
 
 #define MAX_STEPS 160
 #define MAX_DIST  12.0
@@ -191,7 +198,8 @@ vec3 tex0(vec2 uv){
 }
 
 // Simple 9-tap Gaussian-ish smoothing in texel space (to avoid "steppy" artifacts)
-// SMOOTH_RAD controls the footprint.
+// SMOOTH_RAD controls the footprint. Rows run -y..+y, columns -x..+x: the
+// same taps, weights and summation order as the original unrolled sum.
 float heightFromImage(vec2 uv){
     uv = clamp(uv, 0.0, 1.0);
 
@@ -199,40 +207,14 @@ float heightFromImage(vec2 uv){
     vec2 px = 1.0 / iChannelResolution[0].xy;
     vec2 r  = px * SMOOTH_RAD;
 
-    // 3x3 kernel weights (approx Gaussian)
-    float w00 = 0.077847, w10 = 0.123317, w20 = 0.077847;
-    float w01 = 0.123317, w11 = 0.195346, w21 = 0.123317;
-    float w02 = 0.077847, w12 = 0.123317, w22 = 0.077847;
-
-    vec2 o00 = vec2(-r.x, -r.y);
-    vec2 o10 = vec2( 0.0, -r.y);
-    vec2 o20 = vec2( r.x, -r.y);
-
-    vec2 o01 = vec2(-r.x,  0.0);
-    vec2 o11 = vec2( 0.0,  0.0);
-    vec2 o21 = vec2( r.x,  0.0);
-
-    vec2 o02 = vec2(-r.x,  r.y);
-    vec2 o12 = vec2( 0.0,  r.y);
-    vec2 o22 = vec2( r.x,  r.y);
-
-    // sample + luminance
-    float b00 = luma(tex0(uv + o00));
-    float b10 = luma(tex0(uv + o10));
-    float b20 = luma(tex0(uv + o20));
-
-    float b01 = luma(tex0(uv + o01));
-    float b11 = luma(tex0(uv + o11));
-    float b21 = luma(tex0(uv + o21));
-
-    float b02 = luma(tex0(uv + o02));
-    float b12 = luma(tex0(uv + o12));
-    float b22 = luma(tex0(uv + o22));
-
-    float b =
-        b00*w00 + b10*w10 + b20*w20 +
-        b01*w01 + b11*w11 + b21*w21 +
-        b02*w02 + b12*w12 + b22*w22;
+    float b = 0.0;
+    for(int y=-1; y<=1; y++)
+    for(int x=-1; x<=1; x++){
+        // 3x3 kernel weights (approx Gaussian): centre, edge, corner
+        float w = (x == 0 && y == 0) ? 0.195346
+                : ((x == 0 || y == 0) ? 0.123317 : 0.077847);
+        b += luma(tex0(uv + vec2(float(x), float(y)) * r)) * w;
+    }
 
     // approximate linearization for sRGB-ish inputs
     b = pow(sat(b), GAMMA_FIX);
@@ -268,80 +250,128 @@ float sdf(vec3 p){
     return max(bxy, bz);
 }
 
-vec3 calcNormal(vec3 p){
-    // Tetrahedral-ish finite diff for stability
+// Key light
+vec3 keyLight(){ return normalize(vec3(0.55, 0.35, 0.75)); }
+
+// Tetrahedral-ish finite diff taps for stability: e.xyy, e.yyx, e.yxy, e.xxx
+vec3 normalTap(int i){
     vec2 e = vec2(1.0, -1.0) * 0.5773 * 0.0016;
-    return normalize(
-        e.xyy * sdf(p + e.xyy) +
-        e.yyx * sdf(p + e.yyx) +
-        e.yxy * sdf(p + e.yxy) +
-        e.xxx * sdf(p + e.xxx)
-    );
+    if(i == 0) return e.xyy;
+    if(i == 1) return e.yyx;
+    if(i == 2) return e.yxy;
+    return e.xxx;
 }
 
-float softShadow(vec3 ro, vec3 rd, float mint, float maxt){
+// Query phases, in the order the shading needs them.
+#define PHASE_MARCH  0   // primary ray
+#define PHASE_NORMAL 1   // 4 normal taps
+#define PHASE_SHADOW 2   // soft shadow toward the key light
+#define PHASE_AO     3   // 6 ambient occlusion taps
+#define NORMAL_TAPS  4
+#define SHADOW_STEPS 64
+#define AO_TAPS      6
+
+struct Trace {
+    bool hit;
+    vec3 p;      // hit point
+    vec3 n;      // surface normal
+    float sh;    // soft shadow
+    float ao;    // ambient occlusion
+};
+
+// Primary march, normal, soft shadow and AO, each step one sdf() query.
+// Every phase steps exactly as its own loop did; the loop bound is the sum
+// of the phase maxima, so no phase is ever cut short.
+Trace traceScene(vec3 ro, vec3 rd){
+    Trace tr = Trace(false, vec3(0.0), vec3(0.0), 1.0, 1.0);
+    vec3 ldir = keyLight();
+
+    int phase = PHASE_MARCH;
+    int k = 0;     // step within the current phase
+
+    // primary march; tiny dither to reduce banding
+    float jitter = (hash11(dot(ro, vec3(12.7, 78.2, 37.7)) + uTime) - 0.5) * 0.002;
+    float t = 0.0 + max(0.0, jitter);
+    // normal
+    vec3 nAcc = vec3(0.0);
+    // soft shadow
+    vec3 sro = vec3(0.0);
+    float st = 0.02;
     float res = 1.0;
-    float t = mint;
-    for(int i=0; i<64; i++){
-        float h = sdf(ro + rd*t);
-        if(h < 0.0003) return 0.0;
-        res = min(res, 10.0*h/t);
-        t += clamp(h, 0.01, 0.25);
-        if(t > maxt) break;
-    }
-    return clamp(res, 0.0, 1.0);
-}
-
-float ambientOcclusion(vec3 p, vec3 n){
+    // ambient occlusion
     float ao = 0.0;
     float sca = 1.0;
-    for(int i=0; i<6; i++){
-        float h = 0.03 + 0.08*float(i);
-        float d = sdf(p + n*h);
-        ao += (h - d) * sca;
-        sca *= 0.7;
-    }
-    return clamp(1.0 - 1.2*ao, 0.0, 1.0);
-}
 
-bool raymarch(vec3 ro, vec3 rd, out float tHit, out vec3 pHit){
-    float t = 0.0;
+    for(int i=0; i<MAX_STEPS + NORMAL_TAPS + SHADOW_STEPS + AO_TAPS; i++){
+        vec3 q;
+        if(phase == PHASE_MARCH)       q = ro + rd*t;
+        else if(phase == PHASE_NORMAL) q = tr.p + normalTap(k);
+        else if(phase == PHASE_SHADOW) q = sro + ldir*st;
+        else                           q = tr.p + tr.n*(0.03 + 0.08*float(k));
 
-    // tiny dither to reduce banding
-    float jitter = (hash11(dot(ro, vec3(12.7, 78.2, 37.7)) + uTime) - 0.5) * 0.002;
-    t += max(0.0, jitter);
+        float d = sdf(q);
 
-    for(int i=0; i<MAX_STEPS; i++){
-        vec3 p = ro + rd*t;
-        float d = sdf(p);
-
-        if(d < SURF_EPS){
-            tHit = t;
-            pHit = p;
-            return true;
+        if(phase == PHASE_MARCH){
+            if(d < SURF_EPS){
+                tr.hit = true;
+                tr.p = q;
+                phase = PHASE_NORMAL;
+                k = 0;
+            }else{
+                // Safety clamp to avoid "overstepping" thin details and to prevent visible bugs
+                t += clamp(d * 0.75, 0.003, 0.25);
+                k++;
+                if(t > MAX_DIST || k >= MAX_STEPS) break;   // miss
+            }
+        }else if(phase == PHASE_NORMAL){
+            nAcc += normalTap(k) * d;
+            k++;
+            if(k == NORMAL_TAPS){
+                tr.n = normalize(nAcc);
+                sro = tr.p + tr.n*0.002;
+                phase = PHASE_SHADOW;
+                k = 0;
+            }
+        }else if(phase == PHASE_SHADOW){
+            bool shadowDone = false;
+            if(d < 0.0003){
+                tr.sh = 0.0;
+                shadowDone = true;
+            }else{
+                res = min(res, 10.0*d/st);
+                st += clamp(d, 0.01, 0.25);
+                k++;
+                if(st > 5.0 || k >= SHADOW_STEPS){
+                    tr.sh = clamp(res, 0.0, 1.0);
+                    shadowDone = true;
+                }
+            }
+            if(shadowDone){
+                phase = PHASE_AO;
+                k = 0;
+            }
+        }else{
+            float h = 0.03 + 0.08*float(k);
+            ao += (h - d) * sca;
+            sca *= 0.7;
+            k++;
+            if(k == AO_TAPS){
+                tr.ao = clamp(1.0 - 1.2*ao, 0.0, 1.0);
+                break;
+            }
         }
-
-        // Safety clamp to avoid "overstepping" thin details and to prevent visible bugs
-        float stepLen = clamp(d * 0.75, 0.003, 0.25);
-        t += stepLen;
-
-        if(t > MAX_DIST) break;
     }
-
-    return false;
+    return tr;
 }
 
-vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n){
+vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float sh, float ao){
     // Texture color from image
     vec2 uv = worldToUV(p.xy);
     vec3 albedo = tex0(uv);
 
     // Key light
-    vec3 ldir = normalize(vec3(0.55, 0.35, 0.75));
+    vec3 ldir = keyLight();
     float ndl  = max(dot(n, ldir), 0.0);
-
-    float sh = softShadow(p + n*0.002, ldir, 0.02, 5.0);
-    float ao = ambientOcclusion(p, n);
 
     // Spec
     vec3 h = normalize(ldir - rd);
@@ -395,14 +425,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Ray (slight perspective)
     vec3 rd = normalize(uu*uv.x + vv*uv.y + ww*1.6);
 
-    // Raymarch
-    float tHit;
-    vec3 pHit;
+    // Raymarch + normal + shadow + AO
+    Trace tr = traceScene(ro, rd);
     vec3 col;
 
-    if(raymarch(ro, rd, tHit, pHit)){
-        vec3 n = calcNormal(pHit);
-        col = shade(ro, rd, pHit, n);
+    if(tr.hit){
+        col = shade(ro, rd, tr.p, tr.n, tr.sh, tr.ao);
     }else{
         // Background
         float v = 0.5 + 0.5*uv.y;

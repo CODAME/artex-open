@@ -129,97 +129,125 @@ void ddots(int n) {
   d = min(d, v);
 }
 
-void ddigit(int n) {
+// The code arrives as two bytes, low and high: under precision mediump a
+// GPU may hold ints and floats in 16 bits (Mali, Adreno), where a whole code
+// like 0x119F does not survive float() (fp16 is exact only to 2048) and codes
+// from 0x8000 wrap negative. Each byte is at most 255, exact everywhere.
+void ddigit(int lo, int hi) {
   float v = 1.0;
-  if (bit(n,  0)) v = min(v, dseg(vec2( 0.500,  0.063), vec2( 0.500,  0.937)));
-  if (bit(n,  1)) v = min(v, dseg(vec2( 0.438,  1.000), vec2( 0.063,  1.000)));
-  if (bit(n,  2)) v = min(v, dseg(vec2(-0.063,  1.000), vec2(-0.438,  1.000)));
-  if (bit(n,  3)) v = min(v, dseg(vec2(-0.500,  0.937), vec2(-0.500,  0.062)));
-  if (bit(n,  4)) v = min(v, dseg(vec2(-0.500, -0.063), vec2(-0.500, -0.938)));
-  if (bit(n,  5)) v = min(v, dseg(vec2(-0.438, -1.000), vec2(-0.063, -1.000)));
-  if (bit(n,  6)) v = min(v, dseg(vec2( 0.063, -1.000), vec2( 0.438, -1.000)));
-  if (bit(n,  7)) v = min(v, dseg(vec2( 0.500, -0.938), vec2( 0.500, -0.063)));
-  if (bit(n,  8)) v = min(v, dseg(vec2( 0.063,  0.000), vec2( 0.438, -0.000)));
-  if (bit(n,  9)) v = min(v, dseg(vec2( 0.063,  0.063), vec2( 0.438,  0.938)));
-  if (bit(n, 10)) v = min(v, dseg(vec2( 0.000,  0.063), vec2( 0.000,  0.937)));
-  if (bit(n, 11)) v = min(v, dseg(vec2(-0.063,  0.063), vec2(-0.438,  0.938)));
-  if (bit(n, 12)) v = min(v, dseg(vec2(-0.438,  0.000), vec2(-0.063, -0.000)));
-  if (bit(n, 13)) v = min(v, dseg(vec2(-0.063, -0.063), vec2(-0.438, -0.938)));
-  if (bit(n, 14)) v = min(v, dseg(vec2( 0.000, -0.938), vec2( 0.000, -0.063)));
-  if (bit(n, 15)) v = min(v, dseg(vec2( 0.063, -0.063), vec2( 0.438, -0.938)));
+  if (bit(lo, 0)) v = min(v, dseg(vec2( 0.500,  0.063), vec2( 0.500,  0.937)));
+  if (bit(lo, 1)) v = min(v, dseg(vec2( 0.438,  1.000), vec2( 0.063,  1.000)));
+  if (bit(lo, 2)) v = min(v, dseg(vec2(-0.063,  1.000), vec2(-0.438,  1.000)));
+  if (bit(lo, 3)) v = min(v, dseg(vec2(-0.500,  0.937), vec2(-0.500,  0.062)));
+  if (bit(lo, 4)) v = min(v, dseg(vec2(-0.500, -0.063), vec2(-0.500, -0.938)));
+  if (bit(lo, 5)) v = min(v, dseg(vec2(-0.438, -1.000), vec2(-0.063, -1.000)));
+  if (bit(lo, 6)) v = min(v, dseg(vec2( 0.063, -1.000), vec2( 0.438, -1.000)));
+  if (bit(lo, 7)) v = min(v, dseg(vec2( 0.500, -0.938), vec2( 0.500, -0.063)));
+  if (bit(hi, 0)) v = min(v, dseg(vec2( 0.063,  0.000), vec2( 0.438, -0.000)));
+  if (bit(hi, 1)) v = min(v, dseg(vec2( 0.063,  0.063), vec2( 0.438,  0.938)));
+  if (bit(hi, 2)) v = min(v, dseg(vec2( 0.000,  0.063), vec2( 0.000,  0.937)));
+  if (bit(hi, 3)) v = min(v, dseg(vec2(-0.063,  0.063), vec2(-0.438,  0.938)));
+  if (bit(hi, 4)) v = min(v, dseg(vec2(-0.438,  0.000), vec2(-0.063, -0.000)));
+  if (bit(hi, 5)) v = min(v, dseg(vec2(-0.063, -0.063), vec2(-0.438, -0.938)));
+  if (bit(hi, 6)) v = min(v, dseg(vec2( 0.000, -0.938), vec2( 0.000, -0.063)));
+  if (bit(hi, 7)) v = min(v, dseg(vec2( 0.063, -0.063), vec2( 0.438, -0.938)));
   ch_pos.x += ch_space.x;
   d = min(d, v);
 }
 
-#define n0 ddigit(0x22FF);
-#define n1 ddigit(0x0281);
-#define n2 ddigit(0x1177);
-#define n3 ddigit(0x11E7);
-#define n4 ddigit(0x5508);
-#define n5 ddigit(0x11EE);
-#define n6 ddigit(0x11FE);
-#define n7 ddigit(0x2206);
-#define n8 ddigit(0x11FF);
-#define n9 ddigit(0x11EF);
+// Segment codes. Each bit lights one of the 16 segments (see ddigit()).
+// LO/HI split a literal code into its bytes at compile time, so no whole
+// code ever reaches a (possibly 16-bit) register; see ddigit().
+#define LO(c) ((c) - ((c) / 256) * 256)
+#define HI(c) ((c) / 256)
+#define DIGIT_0 0x22FF
+#define DIGIT_1 0x0281
+#define DIGIT_2 0x1177
+#define DIGIT_3 0x11E7
+#define DIGIT_4 0x5508
+#define DIGIT_5 0x11EE
+#define DIGIT_6 0x11FE
+#define DIGIT_7 0x2206
+#define DIGIT_8 0x11FF
+#define DIGIT_9 0x11EF
+#define G_A 0x119F
+#define G_B 0x927E
+#define G_C 0x007E
+#define G_D 0x44E7
+#define G_E 0x107E
+#define G_F 0x101E
+#define G_G 0x807E
+#define G_H 0x1199
+#define G_I 0x4466
+#define G_J 0x4436
+#define G_K 0x9218
+#define G_L 0x0078
+#define G_M 0x0A99
+#define G_N 0x8899
+#define G_O 0x00FF
+#define G_P 0x111F
+#define G_Q 0x80FF
+#define G_R 0x911F
+#define G_S 0x8866
+#define G_T 0x4406
+#define G_U 0x00F9
+#define G_V 0x2218
+#define G_W 0xA099
+#define G_X 0xAA00
+#define G_Y 0x4A00
+#define G_Z 0x2266
+#define G_MINUS 0x1100
+#define G_PLUS 0x5500
+#define G_MULT 0xBB00
+#define G_DIV 0x2200
+#define G_GREATER 0x2800
+#define G_LESS 0x8200
+#define G_OPEN 0x003C
+#define G_CLOSE 0x00C3
+#define G_SQRT 0x0C02
+#define G_ULINE 0x0060
+#define s_dot ddots(0);
 
-#define A ddigit(0x119F);
-#define B ddigit(0x927E);
-#define C ddigit(0x007E);
-#define D ddigit(0x44E7);
-#define E ddigit(0x107E);
-#define F ddigit(0x101E);
-#define G ddigit(0x807E);
-#define H ddigit(0x1199);
-#define I ddigit(0x4466);
-#define J ddigit(0x4436);
-#define K ddigit(0x9218);
-#define L ddigit(0x0078);
-#define M ddigit(0x0A99);
-#define N ddigit(0x8899);
-#define O ddigit(0x00FF);
-#define P ddigit(0x111F);
-#define Q ddigit(0x80FF);
-#define R ddigit(0x911F);
-#define S ddigit(0x8866);
-#define T ddigit(0x4406);
-#define U ddigit(0x00F9);
-#define V ddigit(0x2218);
-#define W ddigit(0xA099);
-#define X ddigit(0xAA00);
-#define Y ddigit(0x4A00);
-#define Z ddigit(0x2266);
-#define s_dot     ddots(0);
-#define s_ddot    ddots(1);
-#define s_minus   ddigit(0x1100);
-#define s_plus    ddigit(0x5500);
-#define s_mult    ddigit(0xBB00);
-#define s_div     ddigit(0x2200);
-#define s_greater ddigit(0x2800);
-#define s_less    ddigit(0x8200);
-#define s_open    ddigit(0x003C);
-#define s_close   ddigit(0x00C3);
-#define s_sqrt    ddigit(0x0C02);
-#define s_uline   ddigit(0x0060);
-#define _  ch_pos.x += ch_space.x;
-#define nl ch_pos.x = ch_start.x; ch_pos.y -= 3.0;
+// Compile cost (#3842): on Windows, ANGLE hands this to Microsoft's FXC,
+// which inlines every ddigit() call. showDigit() used to branch to ten
+// different ddigit() calls, and the digit loops below unrolled, so the
+// numbers alone compiled ~270 ddigit() bodies. It now looks the code up and
+// makes one call, and the digit loops carry loopMarker() so ANGLE emits
+// them as [loop]: WebGL1 forbids uniform loop bounds, the usual way to stop
+// FXC unrolling, and ANGLE only marks a loop [loop] when a texture read sits
+// in it. The marker adds exactly 0.0, so the image is unchanged.
+float loopMarker() {
+  return texture2D(uMainImage, vec2(0.5)).a * 0.0;
+}
+
+// High byte of a digit's segment code (low byte in lo), or -1 to draw
+// nothing (and not advance).
+#define GLYPH(c) { lo = LO(c); return HI(c); }
+int digitCode(float dd, out int lo) {
+  lo = 0;
+  if      (dd < 0.5) GLYPH(DIGIT_0)
+  else if (dd < 1.5) GLYPH(DIGIT_1)
+  else if (dd < 2.5) GLYPH(DIGIT_2)
+  else if (dd < 3.5) GLYPH(DIGIT_3)
+  else if (dd < 4.5) GLYPH(DIGIT_4)
+  else if (dd < 5.5) GLYPH(DIGIT_5)
+  else if (dd < 6.5) GLYPH(DIGIT_6)
+  else if (dd < 7.5) GLYPH(DIGIT_7)
+  else if (dd < 8.5) GLYPH(DIGIT_8)
+  else if (dd < 9.5) GLYPH(DIGIT_9)
+  return -1;
+}
 
 void showDigit(float dd) {
-  if      (dd < 0.5) n0
-  else if (dd < 1.5) n1
-  else if (dd < 2.5) n2
-  else if (dd < 3.5) n3
-  else if (dd < 4.5) n4
-  else if (dd < 5.5) n5
-  else if (dd < 6.5) n6
-  else if (dd < 7.5) n7
-  else if (dd < 8.5) n8
-  else if (dd < 9.5) n9
+  int lo;
+  int hi = digitCode(dd, lo);
+  if (hi >= 0) ddigit(lo, hi);
 }
 
 void showFloat(float value) {
   for (int ni = 4; ni > -3; ni--) {
     if (ni == -1) s_dot;
-    float dd = mod(floor(value / pow(10.0, float(ni))), 10.0);
+    float dd = mod(floor(value / pow(10.0, float(ni))), 10.0) + loopMarker();
     showDigit(dd);
   }
 }
@@ -228,10 +256,193 @@ void showInteger(int value) {
   bool startDisplay = false;
   float fv = float(value) / 10000.0;
   for (int ni = 5; ni > 0; ni--) {
-    float dd = mod(floor(fv), 10.0);
+    float dd = mod(floor(fv), 10.0) + loopMarker();
     if ((dd > 1.0) || (ni == 1)) startDisplay = true;
     if (startDisplay) showDigit(dd);
     fv = fv * 10.0;
+  }
+}
+
+// Compile cost (#3842): each glyph macro used to expand to its own ddigit()
+// call, ~120 inlined copies in main() alone. The static text is now a token
+// list drawn by drawText() loops (marked [loop] by loopMarker()), and the live
+// numbers are drawn between the runs, ~10 ddigit() bodies in all. Tokens run
+// in the original order, so the glyph positions are unchanged.
+//
+// Trade-off, measured: on GPUs this draws faster than the unrolled text
+// (Apple M1 ~15 vs ~18 ms). CPU rasterizers (WARP, SwiftShader) run every
+// branch of a loop body on every iteration, and a run-time glyph code tests
+// all 16 segments, so frames there cost ~4x the unrolled text. The numbers
+// stay out of the loop because inside it they made that ~8x worse.
+const int TK_SPACE = -1;
+const int TK_NEWLINE = -2;
+const int TK_DOT = -3;
+const int TK_COLON = -4;
+const int TK_NUMBER = -5;   // a live number, drawn by main() between runs
+#define TEXT_RUN_MAX 83     // longest drawText() run (tokens 0..82)
+
+// Token i of the text, in drawing order: the high byte of a segment code
+// (low byte in lo), or a negative TK_*.
+int textToken(int i, out int lo) {
+  lo = 0;
+  // n1 n6 s_minus S E G M E N T s_minus D I S P L A Y s_dot V n4 s_ddot nl
+  if (i <= 22) {
+    if (i == 0) GLYPH(DIGIT_1)
+    if (i == 1) GLYPH(DIGIT_6)
+    if (i == 2) GLYPH(G_MINUS)
+    if (i == 3) GLYPH(G_S)
+    if (i == 4) GLYPH(G_E)
+    if (i == 5) GLYPH(G_G)
+    if (i == 6) GLYPH(G_M)
+    if (i == 7) GLYPH(G_E)
+    if (i == 8) GLYPH(G_N)
+    if (i == 9) GLYPH(G_T)
+    if (i == 10) GLYPH(G_MINUS)
+    if (i == 11) GLYPH(G_D)
+    if (i == 12) GLYPH(G_I)
+    if (i == 13) GLYPH(G_S)
+    if (i == 14) GLYPH(G_P)
+    if (i == 15) GLYPH(G_L)
+    if (i == 16) GLYPH(G_A)
+    if (i == 17) GLYPH(G_Y)
+    if (i == 18) return TK_DOT;
+    if (i == 19) GLYPH(G_V)
+    if (i == 20) GLYPH(DIGIT_4)
+    if (i == 21) return TK_COLON;
+    return TK_NEWLINE;
+  }
+  // A B C D E F G H I J K L M N O P Q R S T U V W X Y Z nl
+  if (i <= 49) {
+    if (i == 23) GLYPH(G_A)
+    if (i == 24) GLYPH(G_B)
+    if (i == 25) GLYPH(G_C)
+    if (i == 26) GLYPH(G_D)
+    if (i == 27) GLYPH(G_E)
+    if (i == 28) GLYPH(G_F)
+    if (i == 29) GLYPH(G_G)
+    if (i == 30) GLYPH(G_H)
+    if (i == 31) GLYPH(G_I)
+    if (i == 32) GLYPH(G_J)
+    if (i == 33) GLYPH(G_K)
+    if (i == 34) GLYPH(G_L)
+    if (i == 35) GLYPH(G_M)
+    if (i == 36) GLYPH(G_N)
+    if (i == 37) GLYPH(G_O)
+    if (i == 38) GLYPH(G_P)
+    if (i == 39) GLYPH(G_Q)
+    if (i == 40) GLYPH(G_R)
+    if (i == 41) GLYPH(G_S)
+    if (i == 42) GLYPH(G_T)
+    if (i == 43) GLYPH(G_U)
+    if (i == 44) GLYPH(G_V)
+    if (i == 45) GLYPH(G_W)
+    if (i == 46) GLYPH(G_X)
+    if (i == 47) GLYPH(G_Y)
+    if (i == 48) GLYPH(G_Z)
+    return TK_NEWLINE;
+  }
+  // s_plus s_minus n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 s_dot s_ddot s_uline s_less s_greater s_open s_close s_sqrt nl
+  if (i <= 70) {
+    if (i == 50) GLYPH(G_PLUS)
+    if (i == 51) GLYPH(G_MINUS)
+    if (i == 52) GLYPH(DIGIT_0)
+    if (i == 53) GLYPH(DIGIT_1)
+    if (i == 54) GLYPH(DIGIT_2)
+    if (i == 55) GLYPH(DIGIT_3)
+    if (i == 56) GLYPH(DIGIT_4)
+    if (i == 57) GLYPH(DIGIT_5)
+    if (i == 58) GLYPH(DIGIT_6)
+    if (i == 59) GLYPH(DIGIT_7)
+    if (i == 60) GLYPH(DIGIT_8)
+    if (i == 61) GLYPH(DIGIT_9)
+    if (i == 62) return TK_DOT;
+    if (i == 63) return TK_COLON;
+    if (i == 64) GLYPH(G_ULINE)
+    if (i == 65) GLYPH(G_LESS)
+    if (i == 66) GLYPH(G_GREATER)
+    if (i == 67) GLYPH(G_OPEN)
+    if (i == 68) GLYPH(G_CLOSE)
+    if (i == 69) GLYPH(G_SQRT)
+    return TK_NEWLINE;
+  }
+  // V I E W P O R T _ I S _ showInteger(int(uResolution.x)); _ s_mult _ showInteger(int(uResolution.y)); nl
+  if (i <= 88) {
+    if (i == 71) GLYPH(G_V)
+    if (i == 72) GLYPH(G_I)
+    if (i == 73) GLYPH(G_E)
+    if (i == 74) GLYPH(G_W)
+    if (i == 75) GLYPH(G_P)
+    if (i == 76) GLYPH(G_O)
+    if (i == 77) GLYPH(G_R)
+    if (i == 78) GLYPH(G_T)
+    if (i == 79) return TK_SPACE;
+    if (i == 80) GLYPH(G_I)
+    if (i == 81) GLYPH(G_S)
+    if (i == 82) return TK_SPACE;
+    if (i == 83) return TK_NUMBER;
+    if (i == 84) return TK_SPACE;
+    if (i == 85) GLYPH(G_MULT)
+    if (i == 86) return TK_SPACE;
+    if (i == 87) return TK_NUMBER;
+    return TK_NEWLINE;
+  }
+  // R U N T I M E s_ddot showFloat(uTime); _ S E C O N D S nl
+  if (i <= 106) {
+    if (i == 89) GLYPH(G_R)
+    if (i == 90) GLYPH(G_U)
+    if (i == 91) GLYPH(G_N)
+    if (i == 92) GLYPH(G_T)
+    if (i == 93) GLYPH(G_I)
+    if (i == 94) GLYPH(G_M)
+    if (i == 95) GLYPH(G_E)
+    if (i == 96) return TK_COLON;
+    if (i == 97) return TK_NUMBER;
+    if (i == 98) return TK_SPACE;
+    if (i == 99) GLYPH(G_S)
+    if (i == 100) GLYPH(G_E)
+    if (i == 101) GLYPH(G_C)
+    if (i == 102) GLYPH(G_O)
+    if (i == 103) GLYPH(G_N)
+    if (i == 104) GLYPH(G_D)
+    if (i == 105) GLYPH(G_S)
+    return TK_NEWLINE;
+  }
+  // M O U S E _ P O S I T I O N _ showInteger(int(mp.x)); s_mult showInteger(int(mp.y));
+  {
+    if (i == 107) GLYPH(G_M)
+    if (i == 108) GLYPH(G_O)
+    if (i == 109) GLYPH(G_U)
+    if (i == 110) GLYPH(G_S)
+    if (i == 111) GLYPH(G_E)
+    if (i == 112) return TK_SPACE;
+    if (i == 113) GLYPH(G_P)
+    if (i == 114) GLYPH(G_O)
+    if (i == 115) GLYPH(G_S)
+    if (i == 116) GLYPH(G_I)
+    if (i == 117) GLYPH(G_T)
+    if (i == 118) GLYPH(G_I)
+    if (i == 119) GLYPH(G_O)
+    if (i == 120) GLYPH(G_N)
+    if (i == 121) return TK_SPACE;
+    if (i == 122) return TK_NUMBER;
+    if (i == 123) GLYPH(G_MULT)
+    return TK_NUMBER;
+  }
+}
+
+// Draw tokens first..last of the text (never a TK_NUMBER).
+void drawText(int first, int last) {
+  for (int k = 0; k < TEXT_RUN_MAX; k++) {
+    int i = first + k;
+    if (i > last) break;
+    int lo;
+    int code = textToken(i, lo);
+    d += loopMarker();
+    if (code >= 0) ddigit(lo, code);
+    else if (code == TK_SPACE) ch_pos.x += ch_space.x;
+    else if (code == TK_NEWLINE) { ch_pos.x = ch_start.x; ch_pos.y -= 3.0; }
+    else if (code == TK_DOT) ddots(0);
+    else if (code == TK_COLON) ddots(1);
   }
 }
 
@@ -247,12 +458,17 @@ void main() {
   ch_pos = ch_start + vec2(sin(uTime * max(0.01, uEffectParam1 * 2.0) * max(0.01, uEffectParam2)), 4.0);
 
   ch_color = vec3(2.6 - 4.0 * mouse.x, 1.2 - mouse.x * mouse.y, 0.5 + mouse.y);
-  n1 n6 s_minus S E G M E N T s_minus D I S P L A Y s_dot V n4 s_ddot nl
-  A B C D E F G H I J K L M N O P Q R S T U V W X Y Z nl
-  s_plus s_minus n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 s_dot s_ddot s_uline s_less s_greater s_open s_close s_sqrt nl
-  V I E W P O R T _ I S _ showInteger(int(uResolution.x)); _ s_mult _ showInteger(int(uResolution.y)); nl
-  R U N T I M E s_ddot showFloat(uTime); _ S E C O N D S nl
-  M O U S E _ P O S I T I O N _ showInteger(int(mp.x)); s_mult showInteger(int(mp.y));
+  // Static runs of the token list, with the live numbers drawn in between.
+  drawText(0, 82);                            // ... VIEWPORT IS_
+  showInteger(int(uResolution.x));
+  ch_pos.x += ch_space.x; ddigit(LO(G_MULT), HI(G_MULT)); ch_pos.x += ch_space.x;
+  showInteger(int(uResolution.y));
+  drawText(88, 96);                           // nl RUNTIME:
+  showFloat(uTime);
+  drawText(98, 121);                          // _SECONDS nl MOUSE_POSITION_
+  showInteger(int(mp.x));
+  ddigit(LO(G_MULT), HI(G_MULT));
+  showInteger(int(mp.y));
 
   // Neon glow from segments
   vec3 neonGlow = mix(vec3(0.0), ch_color, 1.0 - clamp(0.08 / d, 0.0, 1.0));

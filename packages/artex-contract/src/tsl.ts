@@ -21,13 +21,18 @@
  * (`.value`). A `ReturnType<typeof uniform>` alias would collapse to the generic
  * overload and lose the node-type tag, breaking TSL math operators.
  */
-import type { Node, TextureNode, UniformNode, Vector2 } from "three/webgpu";
+import type { Node, TextureNode, UniformNode, Vector2, Vector3, Vector4 } from "three/webgpu";
 
 /** A live-mutable scalar (float) uniform node; `.value` is a number. */
 export type TslScalarUniform = UniformNode<"float", number>;
 
 /** A live-mutable vec2 uniform node (e.g. resolution); `.value` is a Vector2. */
 export type TslVec2Uniform = UniformNode<"vec2", Vector2>;
+
+/** A live-mutable vec3 uniform node (e.g. a colour); `.value` is a Vector3. */
+export type TslVec3Uniform = UniformNode<"vec3", Vector3>;
+/** A live-mutable vec4 uniform node; `.value` is a Vector4. */
+export type TslVec4Uniform = UniformNode<"vec4", Vector4>;
 
 /** A texture sampler node (`texture(...)`) whose `.value` the compositor swaps.
  *
@@ -49,6 +54,51 @@ export type TslTextureUniform = TextureNode;
 /** A colour node returned by a graph factory and assigned to a material's `colorNode`.
  *  Factories return a vec4 node (e.g. `vec4(rgb, alpha)`). */
 export type TslColorNode = Node<"vec4">;
+
+/**
+ * The artwork pipeline a GLSL builtin reads through the patcher's
+ * `artex_sampleMain` helpers (`uMainImageResolution`, `uMediaTransform`,
+ * `uStateA..D`, `uStateCount`, `uBlendFactor`), for graphs ported from GLSL.
+ * `@artex/shaders/tsl` turns these into `sampleMain` and friends; a native
+ * graph can ignore them.
+ */
+export interface TslImageInputs {
+  /** The artwork's own size in pixels, for aspect-correct (contained) sampling. 1x1 until known. */
+  sourceResolution: TslVec2Uniform;
+  /**
+   * Pan / zoom / rotate of the artwork as (translateX, translateY, scale,
+   * rotation in radians), the GLSL `uMediaTransform`. Identity (0, 0, 1, 0)
+   * until the host sets it.
+   */
+  mediaTransform: TslVec4Uniform;
+  /**
+   * Evolution state images A–D, the GLSL `uStateA..D`. A slot with no image
+   * samples transparent (WebGL borrowed the previous slot's image; the hosts
+   * load states contiguously, so this never shows).
+   */
+  states: readonly [TslTextureUniform, TslTextureUniform, TslTextureUniform, TslTextureUniform];
+  /** Each state image's size in pixels, with the same fallbacks. */
+  stateResolutions: readonly [TslVec2Uniform, TslVec2Uniform, TslVec2Uniform, TslVec2Uniform];
+  /** How many state images are loaded; 0 means no state blending (the artwork plays). */
+  stateCount: TslScalarUniform;
+  /** Position along the state sequence, 0..1. */
+  blendFactor: TslScalarUniform;
+}
+
+/**
+ * Face tracking, the GLSL `uFaceCenter` / `uLeftEye` / `uRightEye` /
+ * `uHasFace` (and their unprefixed aliases, which carry the same values).
+ * Points are in uv space from the bottom-left, as the GLSL reads them.
+ * Until a host reports a face: centre (0.5, 0.52), eyes (0.42, 0.56) and
+ * (0.58, 0.56), presence 0 — the WebGL backend's defaults.
+ */
+export interface TslFaceInputs {
+  center: TslVec2Uniform;
+  leftEye: TslVec2Uniform;
+  rightEye: TslVec2Uniform;
+  /** 0..1 smoothed presence. */
+  present: TslScalarUniform;
+}
 
 /** Inputs handed to a graph factory when building one shader pass. */
 export interface TslPassInputs {
@@ -80,6 +130,34 @@ export interface TslPassInputs {
   time: TslScalarUniform;
   /** Canvas resolution in device pixels as a vec2 uniform (live). */
   resolution: TslVec2Uniform;
+  /**
+   * A live scalar the host sets by exact name: the TSL counterpart of a GLSL
+   * shader declaring `uniform float uVoiceJump;`. Calling it is the
+   * declaration; the returned node holds `initial` until the host writes it.
+   *
+   * The host writes, in order: the standard interaction names (`uProximity`,
+   * `uAudioLevel`, `uBassLevel`, `uCameraLevel`) from `interaction`, then its
+   * global uniforms (stack binding outputs, `uVoice*` envelopes), which win.
+   * So a graph that reads `liveUniform("uProximity")` gets the raw signal
+   * where no binding targets it and the binding's smoothed value where one
+   * does, exactly as a GLSL pass does. Names are shared with `uniforms`, so a
+   * pass param of the same name is the same node.
+   */
+  liveUniform: (name: string, initial?: number) => TslScalarUniform;
+  /**
+   * `liveUniform` for a vec2 or vec3 the host sets by exact name: the GLSL
+   * `uniform vec2 uPresenceCentroid;` / `uniform vec3 uColorBase;` that a host
+   * fills through `setCustomUniforms`. Holds `initial` (zero by default, as an
+   * unset GLSL uniform reads) whenever the host is not sending it: before the
+   * first value, after the host drops the name, or when the value it sends
+   * has another length.
+   */
+  liveVec2: (name: string, initial?: readonly [number, number]) => TslVec2Uniform;
+  liveVec3: (name: string, initial?: readonly [number, number, number]) => TslVec3Uniform;
+  /** The artwork pipeline for graphs ported from GLSL (see `TslImageInputs`). */
+  image: TslImageInputs;
+  /** Face tracking (see `TslFaceInputs`). */
+  face: TslFaceInputs;
   /** Live interaction signals from the signal bus, normalised to [0, 1]. */
   interaction: {
     audioLevel: TslScalarUniform;

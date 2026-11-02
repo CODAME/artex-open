@@ -113,7 +113,11 @@ const motionGridFactory: TslGraphFactory = ({ source, previousSource, uniforms, 
   const gridSize = vec2(cells, rows) as unknown as Vec2Node;
   const cellSize = div(vec2(1, 1), gridSize) as unknown as Vec2Node;
 
-  const p = uv() as unknown as Vec2Node;
+  // On the WebGPU compositor uv y grows DOWN the screen, while source textures
+  // (three's default flipY) keep the picture's top at v = 1. Work in picture
+  // space from the start so every sample, and the motion taps, play upright.
+  const screen = uv();
+  const p = vec2(screen.x, sub(1, screen.y)) as unknown as Vec2Node;
   const gridPos = mul(p, gridSize) as unknown as Vec2Node;
   const cell = floor(gridPos) as unknown as Vec2Node;
   const local = fract(gridPos) as unknown as Vec2Node;

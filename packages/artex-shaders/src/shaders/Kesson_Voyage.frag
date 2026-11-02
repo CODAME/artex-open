@@ -181,6 +181,16 @@ float getDist(vec3 p) {
   return d1;
 }
 
+// Compile cost (#3842): on Windows, ANGLE hands this to Microsoft's FXC,
+// which is free to unroll a constant-bound loop with no texture read in it, here
+// into 48 copies of getDist() and its five gyroids. WebGL1 forbids uniform
+// loop bounds, the usual way to stop that. ANGLE marks a loop [loop] (never
+// unrolled) when a texture read sits in it, so the march adds this
+// zero-weight read. It adds exactly 0.0, so the image is unchanged.
+float marchLoopMarker() {
+  return texture2D(uMainImage, vec2(0.5)).a * 0.0;
+}
+
 void main() {
   vec2 baseUv = gl_FragCoord.xy / uResolution.xy;
 
@@ -221,7 +231,7 @@ void main() {
   float dO = 0.00001;
   for (int i = 0; i < 48; i++) {
     vec3 p = ro + rd * dO;
-    float dS = getDist(p);
+    float dS = getDist(p) + marchLoopMarker();
     dO += dS;
     if (dO > 20.0 || dS < 0.00001) break;
   }

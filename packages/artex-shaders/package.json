@@ -14,6 +14,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./builtin-shader-library": "./src/builtinShaderLibrary.ts",
+    "./shader-capabilities": "./src/shaderCapabilities.ts",
     "./builtin-shader-authorship": "./src/builtinShaderAuthorship.ts",
     "./shared-licenses": "./src/sharedShaderLicenses.ts",
     "./hidden-builtin-shaders": "./src/hiddenBuiltinShaders.ts",

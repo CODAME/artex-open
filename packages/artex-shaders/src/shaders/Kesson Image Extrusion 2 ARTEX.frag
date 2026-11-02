@@ -146,6 +146,13 @@ vec4 artex_sampleMain(vec4 uv) {
 
 // Shadertoy raymarched "image extrusion" (heightfield solid)
 // Front camera + proper top-right lighting + soft shadows
+//
+// Compile cost (#3842): on Windows, ANGLE hands this to Microsoft's FXC,
+// which inlines every call site. sdf() carries the 9-tap image blur, so each
+// call site costs a full artex_sampleMain copy. Every distance query of the
+// frame (march, normal, shadow, AO) goes through the single sdf() call in
+// traceScene(), so FXC compiles it once. The arithmetic and its order are
+// unchanged; only the call structure moved.
 
 #define MAX_STEPS 180
 #define MAX_DIST  12.0
@@ -220,78 +227,121 @@ float sdf(vec3 p){
     return max(bxy, bz);
 }
 
-vec3 calcNormal(vec3 p){
+// Top-right-front light
+vec3 keyLight(){ return normalize(vec3(0.8, 0.9, 0.6)); }
+
+// Central-difference normal taps: +x, -x, +y, -y, +z, -z
+vec3 normalTapDir(int i){
+    vec3 axis = i < 2 ? vec3(1.0, 0.0, 0.0) : (i < 4 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0));
+    return (i == 0 || i == 2 || i == 4) ? axis : -axis;
+}
+
+// Query phases, in the order the shading needs them.
+#define PHASE_MARCH  0   // primary ray
+#define PHASE_NORMAL 1   // 6 normal taps
+#define PHASE_SHADOW 2   // soft shadow toward the key light
+#define PHASE_AO     3   // 6 ambient occlusion taps
+#define NORMAL_TAPS  6
+#define SHADOW_STEPS 60
+#define AO_TAPS      6
+
+struct Trace {
+    bool hit;
+    vec3 p;      // hit point
+    vec3 n;      // surface normal
+    float sh;    // soft shadow
+    float ao;    // ambient occlusion
+};
+
+// Primary march, normal, soft shadow and AO, each step one sdf() query.
+// Every phase steps exactly as its own loop did; the loop bound is the sum
+// of the phase maxima, so no phase is ever cut short.
+Trace traceScene(vec3 ro, vec3 rd){
+    Trace tr = Trace(false, vec3(0.0), vec3(0.0), 1.0, 1.0);
+    vec3 ldir = keyLight();
     float e = 0.0012;
-    return normalize(vec3(
-        sdf(p+vec3(e,0,0)) - sdf(p-vec3(e,0,0)),
-        sdf(p+vec3(0,e,0)) - sdf(p-vec3(0,e,0)),
-        sdf(p+vec3(0,0,e)) - sdf(p-vec3(0,0,e))
-    ));
-}
 
-float softShadow(vec3 ro, vec3 rd){
+    int phase = PHASE_MARCH;
+    int k = 0;     // step within the current phase
 
+    float t = 0.0;         // primary march
+    vec3 nAcc = vec3(0.0); // normal
+    vec3 sro = vec3(0.0);  // soft shadow
+    float st = 0.02;
     float res = 1.0;
-    float t = 0.02;
-
-    for(int i=0;i<60;i++){
-        float h = sdf(ro + rd*t);
-        if(h < 0.0004) return 0.0;
-
-        res = min(res, 8.0*h/t);
-        t += clamp(h*0.7, 0.01, 0.25);
-
-        if(t > 6.0) break;
-    }
-
-    return clamp(res,0.0,1.0);
-}
-
-float ambientOcclusion(vec3 p, vec3 n){
-    float ao = 0.0;
+    float ao = 0.0;        // ambient occlusion
     float sca = 1.0;
-    for(int i=0;i<6;i++){
-        float h = 0.03 + 0.08*float(i);
-        float d = sdf(p + n*h);
-        ao += (h - d)*sca;
-        sca *= 0.7;
-    }
-    return clamp(1.0 - 1.2*ao, 0.0, 1.0);
-}
 
-bool raymarch(vec3 ro, vec3 rd, out vec3 hitPos){
+    for(int i=0; i<MAX_STEPS + NORMAL_TAPS + SHADOW_STEPS + AO_TAPS; i++){
+        vec3 q;
+        if(phase == PHASE_MARCH)       q = ro + rd*t;
+        else if(phase == PHASE_NORMAL) q = tr.p + normalTapDir(k)*e;
+        else if(phase == PHASE_SHADOW) q = sro + ldir*st;
+        else                           q = tr.p + tr.n*(0.03 + 0.08*float(k));
 
-    float t = 0.0;
+        float d = sdf(q);
 
-    for(int i=0;i<MAX_STEPS;i++){
-        vec3 p = ro + rd*t;
-        float d = sdf(p);
-
-        if(d < SURF_EPS){
-            hitPos = p;
-            return true;
+        if(phase == PHASE_MARCH){
+            if(d < SURF_EPS){
+                tr.hit = true;
+                tr.p = q;
+                phase = PHASE_NORMAL;
+                k = 0;
+            }else{
+                t += clamp(d*0.6, 0.002, 0.2);
+                k++;
+                if(t > MAX_DIST || k >= MAX_STEPS) break;   // miss
+            }
+        }else if(phase == PHASE_NORMAL){
+            nAcc += normalTapDir(k) * d;
+            k++;
+            if(k == NORMAL_TAPS){
+                tr.n = normalize(nAcc);
+                sro = tr.p + tr.n*0.002;
+                phase = PHASE_SHADOW;
+                k = 0;
+            }
+        }else if(phase == PHASE_SHADOW){
+            bool shadowDone = false;
+            if(d < 0.0004){
+                tr.sh = 0.0;
+                shadowDone = true;
+            }else{
+                res = min(res, 8.0*d/st);
+                st += clamp(d*0.7, 0.01, 0.25);
+                k++;
+                if(st > 6.0 || k >= SHADOW_STEPS){
+                    tr.sh = clamp(res,0.0,1.0);
+                    shadowDone = true;
+                }
+            }
+            if(shadowDone){
+                phase = PHASE_AO;
+                k = 0;
+            }
+        }else{
+            float h = 0.03 + 0.08*float(k);
+            ao += (h - d)*sca;
+            sca *= 0.7;
+            k++;
+            if(k == AO_TAPS){
+                tr.ao = clamp(1.0 - 1.2*ao, 0.0, 1.0);
+                break;
+            }
         }
-
-        t += clamp(d*0.6, 0.002, 0.2);
-
-        if(t > MAX_DIST) break;
     }
-
-    return false;
+    return tr;
 }
 
-vec3 shade(vec3 ro, vec3 rd, vec3 p){
+vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float shadow, float ao){
 
-    vec3 n = calcNormal(p);
     vec2 uv = worldToUV(p.xy);
     vec3 albedo = tex0(uv);
 
     // Top-right-front light
-    vec3 ldir = normalize(vec3(0.8, 0.9, 0.6));
+    vec3 ldir = keyLight();
 
     float ndl = max(dot(n, ldir), 0.0);
-    float shadow = softShadow(p + n*0.002, ldir);
-    float ao = ambientOcclusion(p,n);
 
     vec3 h = normalize(ldir - rd);
     float spec = pow(max(dot(n,h),0.0),64.0)*0.35;
@@ -329,11 +379,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     vec3 rd = normalize(uu*uv.x + vv*uv.y + ww*1.8);
 
-    vec3 hitPos;
+    // Raymarch + normal + shadow + AO
+    Trace tr = traceScene(ro, rd);
     vec3 col;
 
-    if(raymarch(ro, rd, hitPos)){
-        col = shade(ro, rd, hitPos);
+    if(tr.hit){
+        col = shade(ro, rd, tr.p, tr.n, tr.sh, tr.ao);
     }
     else{
         float v = 0.5 + 0.5*uv.y;

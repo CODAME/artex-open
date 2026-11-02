@@ -1,19 +1,8 @@
 import { isBuiltinShaderHiddenFromLibrary } from "./hiddenBuiltinShaders";
 import type { ShaderExtensionDefinition } from "@artex/extensions";
+import { inferBuiltinShaderCapabilities, type BuiltinShaderLibraryCapabilities } from "./shaderCapabilities";
 
-const stripGlslComments = (source: string): string => {
-  const noBlocks = source.replace(/\/\*[\s\S]*?\*\//g, (match) => match.replace(/[^\n]/g, " "));
-  return noBlocks.replace(/\/\/[^\n]*/g, "");
-};
-
-export interface BuiltinShaderLibraryCapabilities {
-  usesAudio: boolean;
-  usesCamera: boolean;
-  usesProximity: boolean;
-  usesChannels: boolean;
-  usesFlow: boolean;
-  usesStates: boolean;
-}
+export { inferBuiltinShaderCapabilities, type BuiltinShaderLibraryCapabilities };
 
 export interface BuiltinShaderLibraryItem {
   id: string;
@@ -135,7 +124,7 @@ const BUILTIN_SHADER_LIBRARY_METADATA: Partial<Record<string, BuiltinShaderLibra
   },
   "flower-sdf-artex": {
     label: "Flower SDF ARTEX",
-    description: "Procedural rose-curve flower that opens with proximity and sways with audio.",
+    description: "Procedural rose-curve flower floating underwater. Opens with proximity, sways with audio, and reacts to voice commands.",
   },
   "masterpiece-mesh-artex": {
     label: "Mesh A - Continuous Column",
@@ -207,19 +196,6 @@ const toShaderLabel = (baseName: string): string => {
 
   if (!normalized) return "Unnamed shader";
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-};
-
-const inferBuiltinShaderCapabilities = (source: string): BuiltinShaderLibraryCapabilities => {
-  const lowerSource = stripGlslComments(source).toLowerCase();
-  const hasAny = (tokens: string[]) => tokens.some((token) => lowerSource.includes(token.toLowerCase()));
-  return {
-    usesAudio: hasAny(["uAudioLevel", "uBassLevel"]),
-    usesCamera: hasAny(["uCameraLevel"]),
-    usesProximity: hasAny(["uProximity"]),
-    usesChannels: hasAny(["iChannel0", "iChannel1", "iChannel2", "iChannel3", "uMask", "uState1", "uState2"]),
-    usesFlow: hasAny(["uFlowEnabled", "uFlowIntensity", "uFlowSpeed", "uFlowScale"]),
-    usesStates: hasAny(["uUseStateBlending", "uStateA", "uStateB", "uStateC", "uStateD"]),
-  };
 };
 
 const getBuiltinShaderCapabilityTags = (capabilities: BuiltinShaderLibraryCapabilities): string[] => {

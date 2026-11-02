@@ -74,6 +74,10 @@ uniform float uEffectParam1;
 uniform float uEffectParam2;
 uniform float uEffectParam3;
 
+// Defined before the helpers: the patcher rewrites their texture2D() calls
+// to tex2D(), so it must be declared above its first use.
+vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
+
 float artex_hash(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -218,8 +222,6 @@ vec4 artex_sampleMain(vec3 uv) {
 vec4 artex_sampleMain(vec4 uv) {
   return artex_sampleMain(uv.xy);
 }
-
-vec4 tex2D(sampler2D s, vec2 uv) { return texture2D(s, uv); }
 
 float sat(float x) { return clamp(x, 0.0, 1.0); }
 

@@ -25,9 +25,63 @@ export type FullAssetEntitlementReason = "ownership" | "org-member" | "tier" | "
  * Org roles that count as "member of the owning org" for entitlement (patrons,
  * funders, staff). `viewer` is intentionally excluded — it is a read-only
  * listing role with no access rights (see `OrgMemberRole` in `@artex/core`).
- * Mirror this set in the server resolver.
+ * A `member` counts only when the org granted the seat: see
+ * {@link isSelfAdmittedOrgMember}. Mirror this set in the server resolver.
  */
 export const ENTITLED_ORG_ROLES: ReadonlySet<string> = new Set(["admin", "manager", "member"]);
+
+/**
+ * `autoAssignedReason` values that mark a row a person let themselves into
+ * (owner decision, 2026-10-30: walk-ins stay on preview). `trusted_domain` is
+ * still written; `ticket_purchase` and `program_subscription` are on rows from
+ * before 2026-10-29. `org_dues` is deliberately absent: a paid seat keeps the
+ * org-member entitlement. Mirror this set in the server resolver.
+ */
+export const SELF_ADMITTED_AUTO_ASSIGNED_REASONS: ReadonlySet<string> = new Set([
+  "trusted_domain",
+  "ticket_purchase",
+  "program_subscription",
+]);
+
+/** The fields of an org member row that say how the person got in. */
+export interface OrgMemberAdmissionRecord {
+  role?: string | null;
+  /** Written on every new team row since 2026-10-30 except a dues seat: true for a self-service door. */
+  selfAdmitted?: boolean | null;
+  autoAssigned?: boolean | null;
+  autoAssignedReason?: string | null;
+  /** `"org_dues"` when a dues payment lifted the row's role. */
+  roleGrantedBy?: string | null;
+}
+
+/**
+ * Did this person let themselves into the org's team, rather than the org
+ * putting them there? A walk-in keeps members-only visibility but not the
+ * org-member full-playback / full-asset entitlement (owner decision,
+ * 2026-10-30).
+ *
+ * In order:
+ * - `selfAdmitted` decides when it is stored. Self-service doors (the open
+ *   public door, trusted-domain sign-in, an open invite code) write `true`;
+ *   invites, join codes, approved requests and admin adds write `false`, and
+ *   so does any role an admin assigns afterwards.
+ * - A dues payment that lifted the role (`roleGrantedBy: "org_dues"`) is a
+ *   paid seat, not a walk-in. A row dues created carries no `selfAdmitted`
+ *   and an `autoAssignedReason` outside the set below, so it is not one either.
+ * - Rows from before the field: a row still on the retired Visitor tier
+ *   (`viewer`), which never carried the entitlement (the server reads a stored
+ *   `viewer` as `member`, so it must resolve as a walk-in does), or an
+ *   auto-assignment for a reason in {@link SELF_ADMITTED_AUTO_ASSIGNED_REASONS}.
+ */
+export function isSelfAdmittedOrgMember(member: OrgMemberAdmissionRecord | null | undefined): boolean {
+  if (!member) return false;
+  if (typeof member.selfAdmitted === "boolean") return member.selfAdmitted;
+  if (member.roleGrantedBy === "org_dues") return false;
+  if (member.role === "viewer") return true;
+  return member.autoAssigned === true
+    && typeof member.autoAssignedReason === "string"
+    && SELF_ADMITTED_AUTO_ASSIGNED_REASONS.has(member.autoAssignedReason);
+}
 
 export interface FullAssetEntitlementInput {
   /** Stored subscription tier (raw; may be a legacy alias or null). */
@@ -41,6 +95,11 @@ export interface FullAssetEntitlementInput {
   ownsEdition?: boolean | null;
   /** The identity's role in the owning org, or null/absent when not a member. */
   orgRole?: string | null;
+  /**
+   * The identity let themselves into the owning org's team
+   * ({@link isSelfAdmittedOrgMember}). A self-admitted `member` is not entitled.
+   */
+  orgMemberSelfAdmitted?: boolean | null;
 }
 
 export interface FullAssetEntitlement {
@@ -67,9 +126,17 @@ export function hasActiveCollectorTier(
   return tierAllows(normalizeTierId(subscriptionTier), "collectorAccess");
 }
 
-/** Is this org role one that grants access to the owning org's full assets? */
-export function isEntitledOrgRole(orgRole: string | null | undefined): boolean {
-  return orgRole != null && ENTITLED_ORG_ROLES.has(orgRole);
+/**
+ * Does this org seat grant access to the owning org's full assets? Admins and
+ * managers always; a `member` only when the org granted the seat
+ * (`selfAdmitted` is not true, see {@link isSelfAdmittedOrgMember}).
+ */
+export function isEntitledOrgRole(
+  orgRole: string | null | undefined,
+  selfAdmitted: boolean | null | undefined = false,
+): boolean {
+  if (orgRole == null || !ENTITLED_ORG_ROLES.has(orgRole)) return false;
+  return orgRole !== "member" || selfAdmitted !== true;
 }
 
 /**
@@ -87,7 +154,7 @@ export function resolveFullAssetEntitlement(
   if (input.ownsEdition === true) {
     return { entitled: true, reason: "ownership" };
   }
-  if (isEntitledOrgRole(input.orgRole)) {
+  if (isEntitledOrgRole(input.orgRole, input.orgMemberSelfAdmitted)) {
     return { entitled: true, reason: "org-member" };
   }
   if (hasActiveCollectorTier(input.subscriptionTier, input.subscriptionStatus)) {

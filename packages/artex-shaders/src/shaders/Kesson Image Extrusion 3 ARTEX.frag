@@ -146,6 +146,14 @@ vec4 artex_sampleMain(vec4 uv) {
 
 // Shadertoy raymarched "image extrusion"
 // Front camera + shadows + paper ripple distortion
+//
+// Compile cost (#3842): on Windows, ANGLE hands this to Microsoft's FXC,
+// which inlines every call site. heightFromImage() carries the 9-tap image
+// blur, so each call site costs a full artex_sampleMain copy. Every image
+// height the frame needs (march, normal, texture normal, shadow, AO) comes
+// from the single heightFromImage() call in traceScene(), so FXC compiles it
+// once. The arithmetic and its order are unchanged; only the call structure
+// moved.
 
 #define MAX_STEPS 180
 #define MAX_DIST  12.0
@@ -230,20 +238,6 @@ float heightFromImage(vec2 uv){
     return b;
 }
 
-// Sobel-based texture-space normal for micro-surface detail
-vec3 texNormal(vec2 uv){
-    vec2 texSize = max(iChannelResolution[0].xy, vec2(256.0));
-    vec2 e = 2.0 / texSize;
-    float hL = heightFromImage(uv - vec2(e.x, 0.0));
-    float hR = heightFromImage(uv + vec2(e.x, 0.0));
-    float hD = heightFromImage(uv - vec2(0.0, e.y));
-    float hU = heightFromImage(uv + vec2(0.0, e.y));
-    // Scale tangent displacement by extrusion height for correct slope
-    return normalize(vec3((hL - hR) * GET_H() * 1.8,
-                          (hD - hU) * GET_H() * 1.8,
-                          e.x * 2.0));
-}
-
 // GGX (Trowbridge-Reitz) specular NDF
 float ggxNDF(float NdotH, float roughness){
     float a2 = roughness * roughness * roughness * roughness;
@@ -255,17 +249,20 @@ vec2 worldToUV(vec2 xy){
     return xy / (2.0*DOMAIN_HALF) + 0.5;
 }
 
-float sdf(vec3 p){
+// Image UV the solid samples at p: ripple distortion applied in world space
+vec2 sdfUV(vec3 p){
+    vec2 distortedXY = p.xy + ripple(p.xy);
+    return worldToUV(distortedXY);
+}
+
+// Distance to the solid at p, given heightFromImage(sdfUV(p))
+float sdfFromHeight(vec3 p, float img){
 
     float bx = abs(p.x) - DOMAIN_HALF;
     float by = abs(p.y) - DOMAIN_HALF;
     float bxy = max(bx, by);
 
-    // Apply ripple distortion in world space
-    vec2 distortedXY = p.xy + ripple(p.xy);
-
-    vec2 uv = worldToUV(distortedXY);
-    float h = GET_H() * heightFromImage(uv);
+    float h = GET_H() * img;
 
     float bottom = BASE_Z - p.z;
     float top    = p.z - (BASE_Z + h);
@@ -274,70 +271,153 @@ float sdf(vec3 p){
     return max(bxy, bz);
 }
 
-vec3 calcNormal(vec3 p){
+// Warm key light
+vec3 keyLight(){ return normalize(vec3( 0.8,  0.9,  0.55)); }
+
+// Central-difference normal taps: +x, -x, +y, -y, +z, -z
+vec3 normalTapDir(int i){
+    vec3 axis = i < 2 ? vec3(1.0, 0.0, 0.0) : (i < 4 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0));
+    return (i == 0 || i == 2 || i == 4) ? axis : -axis;
+}
+
+// Sobel texture-normal taps: left, right, down, up
+vec2 texTapDir(int i){
+    if(i == 0) return vec2(-1.0, 0.0);
+    if(i == 1) return vec2( 1.0, 0.0);
+    if(i == 2) return vec2(0.0, -1.0);
+    return vec2(0.0, 1.0);
+}
+
+// Query phases, in the order the shading needs them.
+#define PHASE_MARCH   0   // primary ray
+#define PHASE_NORMAL  1   // 6 SDF normal taps
+#define PHASE_TEXNORM 2   // 4 texture-space (Sobel) normal taps
+#define PHASE_SHADOW  3   // soft shadow toward the key light
+#define PHASE_AO      4   // 6 ambient occlusion taps
+#define NORMAL_TAPS   6
+#define TEXNORM_TAPS  4
+#define SHADOW_STEPS  60
+#define AO_TAPS       6
+
+struct Trace {
+    bool hit;
+    vec3 p;      // hit point
+    vec3 n;      // SDF normal blended with the texture micro-normal
+    float sh;    // soft shadow
+    float ao;    // ambient occlusion
+};
+
+// Primary march, SDF normal, texture normal, soft shadow and AO, each step
+// one heightFromImage() query. Every phase steps exactly as its own loop
+// did; the loop bound is the sum of the phase maxima, so no phase is ever
+// cut short.
+Trace traceScene(vec3 ro, vec3 rd){
+    Trace tr = Trace(false, vec3(0.0), vec3(0.0), 1.0, 1.0);
+    vec3 lKey = keyLight();
     float e = 0.0012;
-    return normalize(vec3(
-        sdf(p+vec3(e,0,0)) - sdf(p-vec3(e,0,0)),
-        sdf(p+vec3(0,e,0)) - sdf(p-vec3(0,e,0)),
-        sdf(p+vec3(0,0,e)) - sdf(p-vec3(0,0,e))
-    ));
-}
+    vec2 texSize = max(iChannelResolution[0].xy, vec2(256.0));
+    vec2 te = 2.0 / texSize;
 
-float softShadow(vec3 ro, vec3 rd){
+    int phase = PHASE_MARCH;
+    int k = 0;     // step within the current phase
 
+    float t = 0.0;          // primary march
+    vec3 nAcc = vec3(0.0);  // SDF normal
+    vec3 nSdf = vec3(0.0);
+    vec2 uv0 = vec2(0.0);   // texture normal
+    vec2 tAcc = vec2(0.0);
+    vec3 sro = vec3(0.0);   // soft shadow
+    float st = 0.02;
     float res = 1.0;
-    float t = 0.02;
-
-    for(int i=0;i<60;i++){
-        float h = sdf(ro + rd*t);
-        if(h < 0.0004) return 0.0;
-        res = min(res, 8.0*h/t);
-        t += clamp(h*0.7, 0.01, 0.25);
-        if(t > 6.0) break;
-    }
-
-    return clamp(res,0.0,1.0);
-}
-
-float ambientOcclusion(vec3 p, vec3 n){
-    float ao = 0.0;
+    float ao = 0.0;         // ambient occlusion
     float sca = 1.0;
-    for(int i=0;i<6;i++){
-        float h = 0.03 + 0.08*float(i);
-        float d = sdf(p + n*h);
-        ao += (h - d)*sca;
-        sca *= 0.7;
-    }
-    return clamp(1.0 - 1.2*ao, 0.0, 1.0);
-}
 
-bool raymarch(vec3 ro, vec3 rd, out vec3 hitPos){
-
-    float t = 0.0;
-
-    for(int i=0;i<MAX_STEPS;i++){
-        vec3 p = ro + rd*t;
-        float d = sdf(p);
-
-        if(d < SURF_EPS){
-            hitPos = p;
-            return true;
+    for(int i=0; i<MAX_STEPS + NORMAL_TAPS + TEXNORM_TAPS + SHADOW_STEPS + AO_TAPS; i++){
+        vec3 q = tr.p;
+        vec2 quv;
+        if(phase == PHASE_TEXNORM){
+            quv = uv0 + texTapDir(k)*te;
+        }else{
+            if(phase == PHASE_MARCH)       q = ro + rd*t;
+            else if(phase == PHASE_NORMAL) q = tr.p + normalTapDir(k)*e;
+            else if(phase == PHASE_SHADOW) q = sro + lKey*st;
+            else                           q = tr.p + tr.n*(0.03 + 0.08*float(k));
+            quv = sdfUV(q);
         }
 
-        t += clamp(d*0.6, 0.002, 0.2);
-        if(t > MAX_DIST) break;
-    }
+        float img = heightFromImage(quv);
+        float d = sdfFromHeight(q, img);
 
-    return false;
+        if(phase == PHASE_MARCH){
+            if(d < SURF_EPS){
+                tr.hit = true;
+                tr.p = q;
+                phase = PHASE_NORMAL;
+                k = 0;
+            }else{
+                t += clamp(d*0.6, 0.002, 0.2);
+                k++;
+                if(t > MAX_DIST || k >= MAX_STEPS) break;   // miss
+            }
+        }else if(phase == PHASE_NORMAL){
+            nAcc += normalTapDir(k) * d;
+            k++;
+            if(k == NORMAL_TAPS){
+                nSdf = normalize(nAcc);
+                uv0 = sdfUV(tr.p);
+                phase = PHASE_TEXNORM;
+                k = 0;
+            }
+        }else if(phase == PHASE_TEXNORM){
+            // (hL - hR, hD - hU)
+            tAcc -= texTapDir(k) * img;
+            k++;
+            if(k == TEXNORM_TAPS){
+                // Scale tangent displacement by extrusion height for correct slope
+                vec3 tn = normalize(vec3(tAcc.x * GET_H() * 1.8,
+                                         tAcc.y * GET_H() * 1.8,
+                                         te.x * 2.0));
+                // SDF normal + texture-space micro-normal blend for surface detail
+                tr.n = normalize(nSdf + tn * 0.55);
+                sro = tr.p + tr.n * 0.002;
+                phase = PHASE_SHADOW;
+                k = 0;
+            }
+        }else if(phase == PHASE_SHADOW){
+            bool shadowDone = false;
+            if(d < 0.0004){
+                tr.sh = 0.0;
+                shadowDone = true;
+            }else{
+                res = min(res, 8.0*d/st);
+                st += clamp(d*0.7, 0.01, 0.25);
+                k++;
+                if(st > 6.0 || k >= SHADOW_STEPS){
+                    tr.sh = clamp(res,0.0,1.0);
+                    shadowDone = true;
+                }
+            }
+            if(shadowDone){
+                phase = PHASE_AO;
+                k = 0;
+            }
+        }else{
+            float h = 0.03 + 0.08*float(k);
+            ao += (h - d)*sca;
+            sca *= 0.7;
+            k++;
+            if(k == AO_TAPS){
+                tr.ao = clamp(1.0 - 1.2*ao, 0.0, 1.0);
+                break;
+            }
+        }
+    }
+    return tr;
 }
 
-vec3 shade(vec3 ro, vec3 rd, vec3 p){
+vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float shadow, float ao){
 
-    // SDF normal + texture-space micro-normal blend for surface detail
-    vec3 n = calcNormal(p);
     vec2 uv = worldToUV(p.xy + ripple(p.xy));
-    vec3 tn = texNormal(uv);
-    n = normalize(n + tn * 0.55);
 
     vec3 albedo = tex0(uv);
     float height01 = sat((p.z - BASE_Z) / GET_H());
@@ -346,14 +426,12 @@ vec3 shade(vec3 ro, vec3 rd, vec3 p){
     float roughness = mix(0.55, 0.12, sat(luma(albedo)));
 
     // --- Lights: warm key + cool fill + ambient ---
-    vec3 lKey  = normalize(vec3( 0.8,  0.9,  0.55));
+    vec3 lKey  = keyLight();
     vec3 lFill = normalize(vec3(-0.6, -0.2,  0.50));
     vec3 cKey  = vec3(1.00, 0.93, 0.80) * 1.4;
     vec3 cFill = vec3(0.38, 0.55, 0.92) * 0.28;
     vec3 cAmb  = vec3(0.05, 0.06, 0.10);
 
-    float shadow  = softShadow(p + n * 0.002, lKey);
-    float ao      = ambientOcclusion(p, n);
     float cavity  = 0.55 + 0.45 * smoothstep(0.0, 1.0, height01);
 
     float ndlKey  = max(dot(n, lKey),  0.0);
@@ -409,11 +487,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     vec3 rd = normalize(uu*uv.x + vv*uv.y + ww*1.8);
 
-    vec3 hitPos;
+    // Raymarch + normals + shadow + AO
+    Trace tr = traceScene(ro, rd);
     vec3 col;
 
-    if(raymarch(ro, rd, hitPos)){
-        col = shade(ro, rd, hitPos);
+    if(tr.hit){
+        col = shade(ro, rd, tr.p, tr.n, tr.sh, tr.ao);
     }
     else{
         float v = 0.5 + 0.5*uv.y;

@@ -79,6 +79,22 @@ your shader responsive to live inputs.
 | `uCameraLevel` | `float` | 0..1 | Movement energy: how much the camera picture is changing (0 still) |
 | `uProximity` | `float` | 0..1 | Viewer proximity (0=far, 1=close) |
 
+### Voice commands (optional — 0 until a command is spoken)
+
+Each spoken command drives a 0..1 envelope, set by exact name on every shader host. Declare only the ones the shader uses. Vocabulary and timing: `docs/voice-commands.md`.
+
+| Uniform | Shape | Typical use |
+|---|---|---|
+| `uVoiceJump` | pulse, 1 → 0 over 1.2 s | a hop: `sin(uVoiceJump * 3.14159)` arcs up and lands |
+| `uVoiceSpin` | pulse, 1 → 0 over 1.6 s | a whirl that unwinds |
+| `uVoiceExplode` | pulse, 1 → 0 over 2.2 s | burst outward, then regather as it decays |
+| `uVoiceDance` | hold, about 8 s | bob and sway |
+| `uVoiceStop` | hold, about 12 s | scale motion by `1.0 - uVoiceStop` so the piece settles |
+| `uVoiceGrow` / `uVoiceShrink` | hold, about 10 s | scale or open / close |
+| `uVoiceGlow` | hold, about 8 s | brightness, rim light |
+| `uVoiceColor` | hold, about 8 s | hue shift |
+| `uVoiceCalm` | hold, about 12 s | slow everything down |
+
 ### Flow / Motion
 
 | Uniform | Type | Default | Description |

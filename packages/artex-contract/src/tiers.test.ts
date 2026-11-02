@@ -32,16 +32,17 @@ describe("ARTEX_TIERS table", () => {
     expect(ARTEX_TIERS.studio.annualPriceMinCents).toBe(12000);
     expect(ARTEX_TIERS.studio.payWhatYouWant).toBe(false);
     expect(ARTEX_TIERS.stage.monthlyPriceMinCents).toBe(2900);
-    expect(ARTEX_TIERS.stage.annualPriceMinCents).toBe(29000);
+    expect(ARTEX_TIERS.stage.annualPriceMinCents).toBe(30000);
     expect(ARTEX_TIERS.collection.monthlyPriceMinCents).toBe(900);
     expect(ARTEX_TIERS.collection.annualPriceMinCents).toBe(9000);
     expect(ARTEX_TIERS.enterprise.annualPriceMinCents).toBe(1600000);
   });
 
-  it("prices annual as 10x monthly (two months free) for every self-serve tier", () => {
-    for (const id of ["studio", "stage", "collection"] as const) {
+  it("keeps Studio and Collection at ten months, and Workspace at 25 per month annually", () => {
+    for (const id of ["studio", "collection"] as const) {
       expect(ARTEX_TIERS[id].annualPriceMinCents).toBe(ARTEX_TIERS[id].monthlyPriceMinCents * 10);
     }
+    expect(ARTEX_TIERS.stage.annualPriceMinCents / 12).toBe(2500);
     // The deprecated venue alias tracks stage exactly.
     expect(ARTEX_TIERS.venue.annualPriceMinCents).toBe(ARTEX_TIERS.stage.annualPriceMinCents);
   });

@@ -113,16 +113,51 @@ export interface WorkEditionEntry {
 
 // ── Phase 3B — Collections ────────────────────────────────────────────────
 
+/**
+ * What kind of grouping a collection is: "series" is an artist's body of work
+ * made as one, "collection" any other grouping, "exhibition" the works an event
+ * showed. Collection and series share every rule. An exhibition stores no works
+ * of its own: it shows its event's lineup (`eventRef`), is made from the event
+ * by someone who manages its org, and stays an exhibition. A document without
+ * the field reads as "collection".
+ * Mirrors `WORK_COLLECTION_TYPES` in `.services/artex-platform-api/workCollections.mjs`.
+ */
+export type WorkCollectionType = "collection" | "series" | "exhibition";
+
+/** The org event an exhibition shows. */
+export interface WorkCollectionEventRef {
+  orgId: string;
+  galleryId: string;
+}
+
 export interface WorkCollection {
   id: string;
   ownerUserId: string;
   slug: string;
   title: string;
   description: string | null;
+  type: WorkCollectionType;
+  /** Set on an exhibition only; null for every other type. */
+  eventRef: WorkCollectionEventRef | null;
   visibility: "private" | "public";
+  /**
+   * Legacy base64 cover, stored inline. No surface shows it and nothing on the
+   * client writes it; `coverImageUrl` is the cover.
+   */
   coverDataUrl: string | null;
+  /**
+   * The cover the artist chose, hosted on ARTEX storage: the profile card, the
+   * public page's hero and its link preview. Null when none is chosen, and the
+   * surfaces use the first work's cover. Absent from an older API.
+   */
+  coverImageUrl?: string | null;
   workIds: string[];
   publishedSlugs: string[];
+  /**
+   * Where the collection sits on the owner's public profile, 0 first. Null
+   * until the artist orders their collections; absent from an older API.
+   */
+  profileOrder?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +176,19 @@ export interface WorkCollection {
  */
 export type WorkCollectionSummary = Omit<WorkCollection, "coverDataUrl" | "ownerUserId">;
 
+/**
+ * One member work as the owner's collections page lists it, from
+ * `GET /work-collections` (`works`). Only the caller's own works are labelled;
+ * a member id with no label is a work that was deleted or is no longer theirs.
+ * Mirrors `projectOwnedWorkLabel` in `.services/artex-platform-api/workCollections.mjs`.
+ */
+export interface WorkCollectionWorkLabel {
+  id: string;
+  title: string;
+  /** False when the public collection page will skip it. */
+  published: boolean;
+}
+
 /** Detail shape: the owner's summary plus the one cover the surface renders. */
 export type WorkCollectionDetail = WorkCollectionSummary & {
   coverDataUrl: string | null;
@@ -151,6 +199,8 @@ export interface PublicWorkCollectionEntry {
   slug: string;
   title: string;
   coverImageUrl: string | null;
+  /** Who the work is credited to, placeholder credits removed; [] when none. Absent from an older API. */
+  artistNames?: string[];
 }
 
 /**
@@ -163,10 +213,8 @@ export interface PublicWorkCollectionEntry {
  *
  * Carries no `ownerUserId` and no `id`: the public surface attributes works to
  * their artists, and neither the curator's user id nor the document id is public
- * data. It carries no cover either: a collection cover is a base64 `data:` URL
- * stored inline, unusable in `og:image` and with no hero surface to render it in,
- * so it is the largest thing in the response and pays for nothing. A hosted
- * cover field lands here when covers move to GCS. `workCount` counts the works that RESOLVED to public entries, so it
+ * data. Its cover is the hosted `coverImageUrl`, never the base64
+ * `coverDataUrl`, which no crawler can render. `workCount` counts the works that RESOLVED to public entries, so it
  * always equals `works.length` — it exists so a caller can render a count
  * without walking the array.
  */
@@ -174,11 +222,46 @@ export interface PublicWorkCollection {
   slug: string;
   title: string;
   description: string | null;
+  type: WorkCollectionType;
+  /** The cover the artist chose, hosted; null when none. Absent from an older API. */
+  coverImageUrl?: string | null;
+  /**
+   * An exhibition's event: its page, its days ("YYYY-MM-DD", end null for a
+   * one-day event or an unknown end) and a short place such as "Berlin,
+   * Germany". Null for other types and for an event that is not public.
+   */
+  event: {
+    name: string;
+    path: string;
+    startDate: string | null;
+    endDate: string | null;
+    place: string | null;
+  } | null;
   updatedAt: string | null;
   workCount: number;
   /** True when membership exceeded the server's per-page cap and was cut. */
   truncated: boolean;
   works: PublicWorkCollectionEntry[];
+}
+
+/**
+ * `GET /public/artists/:id/collections` — one public collection as the
+ * artist's profile lists it, in the artist's profile order.
+ *
+ * Mirrors `projectProfileCollection` in
+ * `.services/artex-platform-api/workCollections.mjs`. `workSlugs` are the
+ * member works the collection page shows, so the profile can leave them out
+ * of its grid of other works.
+ */
+export interface PublicArtistCollection {
+  slug: string;
+  title: string;
+  description: string | null;
+  type: WorkCollectionType;
+  workCount: number;
+  /** The chosen cover, else the first member's; null when neither exists. */
+  coverImageUrl: string | null;
+  workSlugs: string[];
 }
 
 // ── Phase 3C — Series (org-level) ────────────────────────────────────────
@@ -275,6 +358,8 @@ export type ArtexNotificationType =
   | "association_claim_declined"
   /** An org credited this account on one of its records; removable from the profile (#4780). */
   | "org_credit_added"
+  /** An org listed this account on its artist roster; the artist can ask to be removed (#5693). */
+  | "org_roster_added"
   // An imported work moving to the artist who claimed it, and an org taking one
   // back (docs/imported-work-transfer-on-claim.md).
   | "work_transfer_proposed"
@@ -298,6 +383,8 @@ export type ArtexNotificationType =
   | "program_application_withdrawn"
   /** The artist answered a curator's question. */
   | "program_application_replied"
+  /** The artist added the finished work to an accepted proposal. */
+  | "program_application_work_delivered"
   // Print Club
   | "print_club_event_order"
   | "print_club_edition_won"
@@ -311,6 +398,8 @@ export type ArtexNotificationType =
   | "subscription_refund_declined"
   /** A member's subscription payment was refunded (to the member). */
   | "subscription_refund_issued"
+  /** The organization cancelled this member's membership, ending at period end (to the member, #3894). */
+  | "membership_cancelled_by_org"
   // Org / lifecycle
   | "org_vote_closed"
   /** A vote this person may cast a ballot in has opened. */
@@ -348,6 +437,14 @@ export type ArtexNotificationType =
   // recipient flag: they resolve to different preference rows.
   | "artist_new_follower"
   | "org_new_follower"
+  /** A supporter was added to an org (to that org's other admins and managers). */
+  | "org_supporter_added"
+  /** Another org added this org as a supporter (to this org's admins and managers). */
+  | "org_listed_as_supporter"
+  /** An org or program this account follows made an event public. */
+  | "org_event_published"
+  /** An update an org sent to everyone part of an event or collection. */
+  | "gallery_update"
   // Digests and platform announcements. Declared late (#2754): `server.mjs`
   // wrote all three while the union declared none of them, so an exhaustive
   // `switch` compiled clean with three real types falling through, and a
@@ -355,6 +452,12 @@ export type ArtexNotificationType =
   // produces `undefined` in the UI rather than a build error.
   /** An org's activity digest is ready to read. Carries a url. */
   | "org_digest_ready"
+  /**
+   * Keep importing new posts: the daily feed sync brought new posts in from
+   * the org's saved feed as unpublished articles. Sent to the org's admins and
+   * managers; carries a url to the org's Articles tab.
+   */
+  | "org_articles_imported"
   /**
    * A platform announcement. Deliberately carries no url: the body is the whole
    * update, and no client surface reads the type.
@@ -371,6 +474,12 @@ export type ArtexNotificationType =
    * preference row; carries a url to the org's Artists tab.
    */
   | "org_attributed_registration"
+  /**
+   * An artist chose this org on /join and is on its Artist Roster, unlisted
+   * (owner decision, 2026-10-25). Sent to its admins and managers under the
+   * program_artist_signup preference row; carries a url to the Artist Roster tab.
+   */
+  | "org_home_org_chosen"
   // Invite lifecycle — an invitation the recipient accepted, reported back to
   // whoever sent it. Two types on purpose: the org notice resolves to the
   // `org_membership` preference row and links the org's Manage tab; the
@@ -401,11 +510,38 @@ export type ArtexNotificationType =
    */
   | "platform_org_created"
   /**
+   * A school sent its details for ARTEX review (schoolReview.mjs). Sent to
+   * every platform admin but the sender; uncatalogued like the other
+   * platform-admin notices. Names the org only, never the school's contacts.
+   */
+  | "platform_school_review_requested"
+  /**
    * A work went public for the first time. Sent to every platform admin but
    * the one who published it; uncatalogued like the other platform-admin
    * alerts; carries a url to the work's /art/ page.
    */
   | "platform_work_published"
+  /**
+   * An account from before the registration age check answered it below the
+   * minimum age where they live (docs/age-and-location.md). Sent to every
+   * platform admin; uncatalogued like the other platform-admin alerts;
+   * carries a url to the person's /admin/users/:uid page.
+   */
+  /**
+   * A platform admin edited an artist's live profile (name, photo, bio,
+   * location, website or social links). Sent to that artist, one per day
+   * however many fields moved; carries a url to /profile, where they can
+   * change anything back.
+   */
+  | "profile_edited_by_admin"
+  | "platform_age_review"
+  /**
+   * An artist page matched the name review list and is held until an admin
+   * clears it (docs/artist-page-readiness.md). Sent to every platform admin;
+   * uncatalogued like the other platform-admin alerts; carries a url to the
+   * person's /admin/users/:uid page.
+   */
+  | "platform_artist_page_name_review"
   /**
    * Daily rollup to an org's admins and managers: how many join requests have
    * sat in its queue past a week. Carries a url to the org's Invites tab.

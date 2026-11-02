@@ -184,7 +184,27 @@ export type GestureSignalName =
   | "leftHandPresent"
   | "rightHandPresent"
   | "manualClapPulse"
-  | "holdingPhone";
+  | "holdingPhone"
+  | VoiceCommandSignalName;
+
+/**
+ * Spoken voice commands, as signals a gesture binding can fire on. Each is the
+ * command's 0..1 envelope (`@artex/runtime-web/voice`): a pulse that decays for
+ * "jump" / "spin" / "explode", a hold for the rest. Not MediaPipe-derived;
+ * they ride the gesture-binding list because that is where an artist binds a
+ * signal to an action.
+ */
+export type VoiceCommandSignalName =
+  | "voice.jump"
+  | "voice.dance"
+  | "voice.spin"
+  | "voice.stop"
+  | "voice.explode"
+  | "voice.grow"
+  | "voice.shrink"
+  | "voice.glow"
+  | "voice.color"
+  | "voice.calm";
 
 /**
  * Visual configuration for the skeleton/presence overlay canvas. All fields

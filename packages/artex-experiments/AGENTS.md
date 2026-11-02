@@ -17,7 +17,7 @@ Sandbox tracks for experience prototypes that are not yet ready to live in the s
 - **Do not import from `artex-core`, `apps/creator`, or `.services/`.** Experiments live in the open layer.
 - **Every experiment exposes the recipe authoring contract.** Guided panel (bounded sliders) + raw JSON editor. Same recipe structure serves Random Variation and AI Suggested Behaviour.
 - **Artist approval is required before any generated or mutated recipe is persisted.** No auto-persist.
-- **No AI inference inside the render loop.** Generative steps run async and stage results before the next frame uses them.
+- **No AI inference inside the render loop.** Generative steps run async and stage results before the next frame uses them. On-device models beside the loop are allowed only under `docs/on-device-inference.md`.
 - **Three.js is acceptable here.** It is not yet first-class in the stable contract; experiments are the staging ground.
 
 ## Recipe schema — required extensions

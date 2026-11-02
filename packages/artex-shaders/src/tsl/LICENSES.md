@@ -17,6 +17,12 @@ differencing per cell, hashed per-cell shift and slit-scan stretch). It was
 prompted by a TouchDesigner piece by Ivan Puñal García (@unavisionagradable)
 seen only as a video; no project file or code from it was used.
 
+`graphs/touchGrid.ts` is an original frosted-glass camera-grid graph (per-cell
+framing, per-pixel distance blur and haze, approach motion, camera labels).
+`helpers/pixelFont.ts` is an original 3×5 pixel font.
+It was prompted by "touch[0]" by @sherrryism, scored to Ryoji Ikeda, seen only
+as an Instagram video; no footage, project file, or code from it was used.
+
 The sample graphs (`graphs/*.ts`) are visually inspired by the open WebGPU/TSL
 demo space (e.g. `github.com/klevron/test-webgpu`) but share no source code with
 it. The klevron repository ships under no license; nothing here is derived from
