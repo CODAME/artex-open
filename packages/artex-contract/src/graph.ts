@@ -383,6 +383,8 @@ export type ArtexNotificationType =
   | "program_application_withdrawn"
   /** The artist answered a curator's question. */
   | "program_application_replied"
+  // A teammate @mentioned you in a submission's team notes.
+  | "team_note_mention"
   /** The artist added the finished work to an accepted proposal. */
   | "program_application_work_delivered"
   // Print Club
