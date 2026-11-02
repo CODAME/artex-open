@@ -387,6 +387,8 @@ export type ArtexNotificationType =
   | "team_note_mention"
   /** The artist added the finished work to an accepted proposal. */
   | "program_application_work_delivered"
+  /** A work an org shows changed: re-published, edited, offline, private or back (placedWorkUpdates.mjs). */
+  | "placed_work_updated"
   // Print Club
   | "print_club_event_order"
   | "print_club_edition_won"
