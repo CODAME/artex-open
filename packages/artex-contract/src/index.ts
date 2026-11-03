@@ -17,6 +17,7 @@ export * from "./earlyAccess";
 export * from "./feeWaiver";
 export * from "./projectListing";
 export * from "./projectAiPermissions";
+export * from "./workAiGenerated";
 export * from "./provenance";
 export * from "./standing";
 export * from "./v2/types";

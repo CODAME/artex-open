@@ -473,6 +473,12 @@ export type ArtexNotificationType =
    */
   | "platform_digest_ready"
   /**
+   * A signal needs a platform admin: proposed from outside the team, or asked
+   * to come down by its organizer (docs/signals.md, slice 7). Uncatalogued
+   * like the other platform-admin alerts; carries a url to /admin/signals.
+   */
+  | "signal_review_needed"
+  /**
    * Someone registered on ARTEX through an org's outreach link (COD-157).
    * Sent to that org's admins and managers under the program_artist_signup
    * preference row; carries a url to the org's Artists tab.
