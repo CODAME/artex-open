@@ -24,10 +24,10 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
-    "three": "^0.186.1"
+    "three": "^0.187.0"
   },
   "peerDependencies": {
-    "three": "^0.186.1"
+    "three": "^0.187.0"
   },
   "peerDependenciesMeta": {
     "three": {

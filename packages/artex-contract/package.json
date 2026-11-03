@@ -22,7 +22,7 @@
     "./tsl": "./src/tsl.ts"
   },
   "peerDependencies": {
-    "three": "^0.186.1"
+    "three": "^0.187.0"
   },
   "peerDependenciesMeta": {
     "three": {
