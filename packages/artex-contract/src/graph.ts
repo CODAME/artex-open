@@ -635,7 +635,10 @@ export const isValidCreditProposalStatus = (value: unknown): value is CreditProp
 
 // ── Phase 6A — Fork permissions ───────────────────────────────────────────
 
-export type ForkPolicy = "open" | "ask" | "royalty" | "closed";
+/** Every fork policy, in the order the Studio offers them. */
+export const FORK_POLICIES = ["open", "ask", "royalty", "closed"] as const;
+
+export type ForkPolicy = (typeof FORK_POLICIES)[number];
 
 export interface WorkForkPolicyConfig {
   policy: ForkPolicy;
@@ -659,7 +662,7 @@ export const DEFAULT_FORK_POLICY: WorkForkPolicyConfig = {
 };
 
 export const isValidForkPolicy = (value: unknown): value is ForkPolicy =>
-  ["open", "ask", "royalty", "closed"].includes(value as string);
+  (FORK_POLICIES as readonly string[]).includes(value as string);
 
 export interface ForkRequest {
   id: string;

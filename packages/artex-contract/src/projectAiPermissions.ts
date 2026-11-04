@@ -19,9 +19,15 @@
 // The parameter is a structural shape, not PlatformProjectRecord: that type
 // lives in @artex/core, and the contract package must never import core
 // (scripts/check_workspace_boundaries.mjs). The platform API cannot import
-// this file either, and today it neither reads nor writes these fields, so
-// there is no server mirror. The first server reader adds a `.mjs` mirror
-// with a parity test (docs/artist-licensing-and-offerings-plan.md §5.7).
+// this file either, so its one reader, the public work page's `derive`,
+// restates it in `.services/artex-platform-api/workPermissionsPublic.mjs`,
+// whose test pins it to this source. Change `derive` here and that test fails
+// until the mirror follows.
+//
+// `remix` here is the catalog listing: whether the work is offered as a
+// starter. It is NOT what the public work page shows as "open to remix":
+// that line shows the fork policy the derived-from gate enforces (graph.ts
+// `ForkPolicy`; owner decision 2026-11-03, docs/work-permissions.md).
 
 import { isProjectListed, type ProjectListingFields } from "./projectListing";
 
