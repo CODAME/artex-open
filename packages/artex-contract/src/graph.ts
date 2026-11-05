@@ -413,6 +413,8 @@ export type ArtexNotificationType =
   | "org_broadcast"
   | "legacy_sunset_reminder"
   // Offerings — request lifecycle (both parties; Phase 3 licensing & services)
+  /** A collector asked an artist about a work listed for sale; in-app only. */
+  | "work_inquiry_received"
   | "offering_request_received"
   | "offering_request_updated"
   | "offering_request_accepted"
