@@ -7,7 +7,24 @@ export type ExtensionCapability =
   | "sandbox:register"
   | "block:register"
   | "asset:read"
-  | "secret:read";
+  | "secret:read"
+  /** Read the moment of a piece of writing being read (`BlockPlayerContext.textMomentRef`). */
+  | "text:read";
+
+/**
+ * The moment of a piece of writing being read beside a piece: its plain text,
+ * its position and how many there are. Set by the host while a reading plays
+ * (ARTEX: a writing work's living page, docs/writing-works.md); null when no
+ * reading is beside the piece. Text only, never markup; the host caps it.
+ */
+export interface TextMoment {
+  /** 0-based position of the moment in the reading. */
+  index: number;
+  /** How many moments the reading has. */
+  count: number;
+  /** The moment's words, as plain text. */
+  text: string;
+}
 
 export interface BaseExtensionDefinition {
   id: string;
@@ -88,6 +105,12 @@ export interface BlockPlayerContext {
    * `assetReferences[]` listed the id. Returns null when not found.
    */
   getAsset?: (assetId: string) => Promise<string | null>;
+  /**
+   * The moment of a piece of writing being read beside this piece. Present
+   * only when the plugin declares `text:read`. Read `current` each frame, as
+   * with signals; it is null when no reading is beside the piece.
+   */
+  textMomentRef?: { readonly current: TextMoment | null };
 }
 
 /**

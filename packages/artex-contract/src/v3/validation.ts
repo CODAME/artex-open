@@ -4,7 +4,7 @@
  */
 
 import type { RendererHint } from "../types";
-import { MAX_FRAME_BUFFER_CAPTURES, RENDERER_SUBSYSTEMS } from "./types";
+import { MAX_FRAME_BUFFER_CAPTURES, MEDIA_BLOCK_MAX_ITEMS, RENDERER_SUBSYSTEMS } from "./types";
 import type {
   BehaviourModelConfig,
   ContextInputsConfig,
@@ -15,6 +15,7 @@ import type {
   FrameBufferAdapterConfig,
   GestureBindingConfig,
   HtmlBlockConfig,
+  MediaBlockConfig,
   InterpretationBoundary,
   MutationPolicy,
   ParticleEmitterConfig,
@@ -579,6 +580,72 @@ export function validateFractureBlock(config: FractureBlockConfig): void {
 }
 
 // ---------------------------------------------------------------------------
+// Media block (a work's photos and videos; multi-media plan §3)
+// ---------------------------------------------------------------------------
+
+/** Hosts that are embeds, never files. A media block never plays one. */
+const EMBED_HOST_PATTERN = /(^|\.)(vimeo\.com|youtube\.com|youtube-nocookie\.com|youtu\.be)$/i;
+
+const isPackageArtPath = (value: string): boolean =>
+  /^art\/[^/]+$/.test(value) && !value.includes("..");
+
+export function validateMediaBlock(config: MediaBlockConfig): void {
+  const items: unknown = (config as { items?: unknown }).items;
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new PieceConfigError("invalid_media_block", "Media block must have at least one item.");
+  }
+  if (items.length > MEDIA_BLOCK_MAX_ITEMS) {
+    throw new PieceConfigError("invalid_media_block", `Media block holds at most ${MEDIA_BLOCK_MAX_ITEMS} items.`);
+  }
+  const ids = new Set<string>();
+  for (const raw of items as Array<Record<string, unknown> | null>) {
+    const id = typeof raw?.id === "string" ? raw.id.trim() : "";
+    if (!id) throw new PieceConfigError("invalid_media_block", "Media block item must have a non-empty id.");
+    if (ids.has(id)) throw new PieceConfigError("invalid_media_block", `Duplicate media block item id "${id}".`);
+    ids.add(id);
+    if (!raw) continue;
+    if (raw.kind !== "image" && raw.kind !== "video") {
+      // "embed" lands here on purpose: Display never plays a third-party player.
+      throw new PieceConfigError("invalid_media_block", `Media block item "${id}" must be an image or a video.`);
+    }
+    const path = typeof raw.path === "string" ? raw.path.trim() : "";
+    const url = typeof raw.url === "string" ? raw.url.trim() : "";
+    if (path && !isPackageArtPath(path)) {
+      throw new PieceConfigError("invalid_media_block", `Media block item "${id}" path must be a file directly under art/.`);
+    }
+    if (url) {
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        throw new PieceConfigError("invalid_media_block", `Media block item "${id}" url must be a valid absolute URL.`);
+      }
+      if (parsed.protocol !== "https:") {
+        throw new PieceConfigError("invalid_media_block", `Media block item "${id}" url must use https.`);
+      }
+      if (EMBED_HOST_PATTERN.test(parsed.hostname)) {
+        throw new PieceConfigError("invalid_media_block", `Media block item "${id}" is an embed; embeds never play in a media block.`);
+      }
+    }
+    if (raw.kind === "video" && !url) {
+      throw new PieceConfigError("invalid_media_block", `Media block video "${id}" must have a hosted https url.`);
+    }
+    if (raw.kind === "image" && !path && !url) {
+      throw new PieceConfigError("invalid_media_block", `Media block image "${id}" must have a path or a url.`);
+    }
+    if (raw.animated !== undefined && typeof raw.animated !== "boolean") {
+      throw new PieceConfigError("invalid_media_block", `Media block item "${id}" has a non-boolean \`animated\`.`);
+    }
+    if (raw.animated === true && raw.kind !== "image") {
+      throw new PieceConfigError("invalid_media_block", `Media block item "${id}" is animated but not an image.`);
+    }
+    if (raw.durationSec !== undefined && (typeof raw.durationSec !== "number" || !Number.isFinite(raw.durationSec) || raw.durationSec <= 0)) {
+      throw new PieceConfigError("invalid_media_block", `Media block item "${id}" durationSec must be a finite number > 0.`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Composition (C.3.1) — discriminated union dispatch
 // ---------------------------------------------------------------------------
 
@@ -628,6 +695,9 @@ function validateBlockByKind(block: Block): void {
       return;
     case "fracture":
       validateFractureBlock(block.config);
+      return;
+    case "media":
+      validateMediaBlock(block.config);
       return;
     default: {
       const exhaustiveCheck: never = block;

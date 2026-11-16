@@ -120,8 +120,16 @@ export const PLATFORM_FEE_SCHEDULE: readonly PlatformFeeGroup[] = [
     title: "Participation payments",
     summary: "The lowest rate, because the people paying are attendees and artists.",
     items: [
-      { label: "Event tickets", rate: "5% plus processing" },
-      { label: "Open call entry fees", rate: "5% plus processing" },
+      {
+        label: "Event tickets",
+        rate: "5% plus processing",
+        note: "Buyers pay the listed price. When ARTEX collects the payment, processing comes out of the organization's share.",
+      },
+      {
+        label: "Open call entry fees",
+        rate: "5% plus processing",
+        note: "Artists pay the listed fee. When ARTEX collects the payment, processing comes out of the organization's share.",
+      },
     ],
   },
   {

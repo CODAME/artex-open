@@ -13,6 +13,7 @@ import type { TslGraphEntry, TslGraphFactory } from "@artex/contract/tsl";
 import { FLOW_FIELD_TSL_GRAPH } from "./graphs/flowField";
 import { MOTION_GRID_TSL_GRAPH } from "./graphs/motionGrid";
 import { TOUCH_GRID_TSL_GRAPH } from "./graphs/touchGrid";
+import { IDENTITY_ECHO_TSL_GRAPH } from "./graphs/identityEcho";
 import { FLOWER_SDF_TSL_GRAPH } from "./graphs/flowerSdf";
 import { REEDED_GLASS_TSL_GRAPH } from "./graphs/reededGlass";
 import { PHONE_CHROMATIC_WARP_TSL_GRAPH } from "./graphs/phoneChromaticWarp";
@@ -25,6 +26,7 @@ export const BUILTIN_TSL_GRAPH_LIBRARY: readonly TslGraphEntry[] = [
   FLOW_FIELD_TSL_GRAPH,
   MOTION_GRID_TSL_GRAPH,
   TOUCH_GRID_TSL_GRAPH,
+  IDENTITY_ECHO_TSL_GRAPH,
   FLOWER_SDF_TSL_GRAPH,
   REEDED_GLASS_TSL_GRAPH,
   PHONE_CHROMATIC_WARP_TSL_GRAPH,
@@ -40,6 +42,7 @@ export const BUILTIN_TSL_GRAPHS_BY_ID: Readonly<Record<string, TslGraphFactory>>
 export * from "./graphs/flowField";
 export * from "./graphs/motionGrid";
 export * from "./graphs/touchGrid";
+export * from "./graphs/identityEcho";
 export * from "./graphs/flowerSdf";
 export * from "./graphs/reededGlass";
 export * from "./graphs/phoneChromaticWarp";

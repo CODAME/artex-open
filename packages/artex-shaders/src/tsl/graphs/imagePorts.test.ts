@@ -10,7 +10,7 @@ import {
   PHONE_GLITCH_SPLIT_TSL_LIVE_UNIFORMS,
   TSL_GRAPH_LIVE_UNIFORMS,
 } from "../scriptIds";
-import { stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
+import { stubChannelInputs, stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
 import { PHONE_CHROMATIC_WARP_TSL_GRAPH } from "./phoneChromaticWarp";
 import { PHONE_GLITCH_SPLIT_TSL_GRAPH } from "./phoneGlitchSplit";
 import { LIVING_FIELD_TSL_GRAPH } from "./livingField";
@@ -28,6 +28,7 @@ function build(graph: TslGraphEntry): { scalars: Set<string>; vectors: Set<strin
     uniforms,
     image: stubImageInputs(),
     face: stubFaceInputs(),
+    channels: stubChannelInputs(),
     liveVec2: lv.liveVec2,
     liveVec3: lv.liveVec3,
     liveUniform(name: string, initial = 0) {

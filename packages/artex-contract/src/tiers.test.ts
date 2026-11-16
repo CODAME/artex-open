@@ -103,6 +103,15 @@ describe("tierAllows", () => {
     expect(tierAllows("studio", "maxInstallations")).toBe(true); // 1
   });
 
+  it("puts AI assistant access in ARTEX Workspace and up, never Free, Studio or Collection", () => {
+    expect(tierAllows("free", "assistantAccess")).toBe(false);
+    expect(tierAllows("studio", "assistantAccess")).toBe(false);
+    expect(tierAllows("collection", "assistantAccess")).toBe(false);
+    expect(tierAllows("stage", "assistantAccess")).toBe(true);
+    expect(tierAllows("venue", "assistantAccess")).toBe(true);
+    expect(tierAllows("enterprise", "assistantAccess")).toBe(true);
+  });
+
   it("gates Studio Desktop to paid creator/org tiers, not free or collector", () => {
     expect(tierAllows("free", "studioDesktopAccess")).toBe(false);
     expect(tierAllows("collection", "studioDesktopAccess")).toBe(false);

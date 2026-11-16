@@ -66,6 +66,14 @@ export interface ArtexTierFeatures {
   // real gate, since the installer itself is a public GitHub release asset
   // and cannot be access-controlled at the download link.
   studioDesktopAccess: boolean;
+  // An AI assistant (ChatGPT, Claude, through ARTEX's MCP service) may act
+  // for an organization on this plan: draft its articles and updates, host
+  // its images. An org-level capability, resolved like the other org
+  // entitlements (the org's plan, or a current admin's or manager's). Part of
+  // ARTEX Workspace (owner decision 2026-11-12, docs/mcp-tokens.md).
+  // Enforced server-side for every MCP token on an org route
+  // (assertMcpOrgOnWorkspace, server.mjs) and on the OAuth consent screen.
+  assistantAccess: boolean;
 }
 
 /** Bytes in one gibibyte — keeps storage quotas readable. */
@@ -91,6 +99,7 @@ const STAGE_FEATURES: ArtexTierFeatures = {
   broadcastSendReach: 1000,
   customDomains: true,
   studioDesktopAccess: true,
+  assistantAccess: true,
 };
 
 const STAGE_NAME = "ARTEX Workspace";
@@ -122,6 +131,7 @@ export const ARTEX_TIERS: Record<ArtexTierId, ArtexTierDefinition> = {
       broadcastSendReach: 100,
       customDomains: false,
       studioDesktopAccess: false,
+      assistantAccess: false,
     },
   },
   studio: {
@@ -149,6 +159,7 @@ export const ARTEX_TIERS: Record<ArtexTierId, ArtexTierDefinition> = {
       broadcastSendReach: 250,
       customDomains: false,
       studioDesktopAccess: true,
+      assistantAccess: false,
     },
   },
   stage: {
@@ -188,6 +199,7 @@ export const ARTEX_TIERS: Record<ArtexTierId, ArtexTierDefinition> = {
       broadcastSendReach: 100,
       customDomains: false,
       studioDesktopAccess: false,
+      assistantAccess: false,
     },
   },
   enterprise: {
@@ -215,6 +227,7 @@ export const ARTEX_TIERS: Record<ArtexTierId, ArtexTierDefinition> = {
       broadcastSendReach: -1,
       customDomains: true,
       studioDesktopAccess: true,
+      assistantAccess: true,
     },
   },
   // DEPRECATED ALIAS — `venue` was renamed to `stage`. Kept so existing user

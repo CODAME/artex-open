@@ -216,6 +216,23 @@ export const createStateFromConfig = (config: ConfigJson): StateJson => {
   };
 };
 
+/**
+ * Every package path a `media` block in the config's piece names, so the
+ * loader extracts them. Reads defensively: the config is unvalidated JSON here.
+ */
+export const mediaBlockPackagePaths = (config: ConfigJson): string[] => {
+  const composition: unknown = config.pieceConfigV3?.composition;
+  if (!Array.isArray(composition)) return [];
+  const paths: string[] = [];
+  for (const block of composition as Array<{ kind?: unknown; config?: { items?: unknown } } | null>) {
+    if (!block || block.kind !== "media" || !Array.isArray(block.config?.items)) continue;
+    for (const item of block.config.items as Array<{ path?: unknown } | null>) {
+      if (typeof item?.path === "string" && /^art\/[^/]+$/.test(item.path)) paths.push(item.path);
+    }
+  }
+  return paths;
+};
+
 const findFallbackBaseImagePath = (zipEntryPaths: string[]): string | null => {
   const artEntry = zipEntryPaths.find((path) => /^art\/[^/]+$/.test(path));
   return artEntry ?? null;
@@ -272,6 +289,10 @@ export async function readCodamePackageArchive(zipFile: Blob | ArrayBuffer | Uin
     if (path) referencedPaths.add(path);
   });
   if (assets.audioPath) referencedPaths.add(assets.audioPath);
+  // A media block names its own files (docs/runtime-player-contract.md, "The
+  // media block"). A missing one only warns: the player skips that item, or
+  // plays it from its hosted url.
+  for (const path of mediaBlockPackagePaths(config)) referencedPaths.add(path);
 
   const files = new Map<string, Blob>();
   const warnings: string[] = [];

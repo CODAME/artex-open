@@ -21,7 +21,7 @@ import { ClampToEdgeWrapping, DataTexture, NearestFilter, SRGBColorSpace, Vector
 import type { TslPassInputs, TslScalarUniform } from "@artex/contract/tsl";
 import { pixelAt } from "@artex/render-core/testing/headless-gpu";
 import { probeHeadlessGpu } from "../testing/headlessGpuProbe";
-import { stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
+import { stubChannelInputs, stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
 import { sampleMain } from "./artexImage";
 import { fromDisplay } from "./displaySpace";
 
@@ -63,6 +63,7 @@ function inputsFor(source: DataTexture, sourceSize: [number, number]) {
     uniforms,
     image,
     face: stubFaceInputs(),
+    channels: stubChannelInputs(),
     ...stubLiveVectors(),
     liveUniform(name: string, initial = 0) {
       let node = uniforms.get(name);

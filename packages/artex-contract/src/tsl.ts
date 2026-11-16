@@ -100,6 +100,24 @@ export interface TslFaceInputs {
   present: TslScalarUniform;
 }
 
+/**
+ * The shader channels iChannel0..3, the GLSL `iChannel0..3`: images or video
+ * the piece binds beside its artwork (a channel whose source is `"camera"`
+ * holds the live camera). A slot with nothing bound samples transparent and
+ * reports a 1x1 size.
+ *
+ * A graph that stands in for a GLSL builtin reads the channel the GLSL reads.
+ * On WebGL, channel 0 is also `uMainImage` (the patcher renames `iChannel0` to
+ * it), so a shader that needs the artwork and a camera puts the camera on
+ * channel 1 (Identity Echo does). Channel 1 is also the image the user-shader
+ * composite masks with when its mask source is `channel1`.
+ */
+export interface TslChannelInputs {
+  textures: readonly [TslTextureUniform, TslTextureUniform, TslTextureUniform, TslTextureUniform];
+  /** Each channel's size in pixels, for aspect-correct sampling. 1x1 while the slot is empty. */
+  resolutions: readonly [TslVec2Uniform, TslVec2Uniform, TslVec2Uniform, TslVec2Uniform];
+}
+
 /** Inputs handed to a graph factory when building one shader pass. */
 export interface TslPassInputs {
   /** Source artwork texture node. Equal to `prevPass` for the first pass. */
@@ -158,6 +176,8 @@ export interface TslPassInputs {
   image: TslImageInputs;
   /** Face tracking (see `TslFaceInputs`). */
   face: TslFaceInputs;
+  /** The shader channels iChannel0..3 (see `TslChannelInputs`). */
+  channels: TslChannelInputs;
   /** Live interaction signals from the signal bus, normalised to [0, 1]. */
   interaction: {
     audioLevel: TslScalarUniform;

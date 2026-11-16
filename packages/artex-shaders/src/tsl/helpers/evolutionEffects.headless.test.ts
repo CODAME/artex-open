@@ -16,7 +16,7 @@ import type { Node } from "three/webgpu";
 import type { TslPassInputs, TslScalarUniform } from "@artex/contract/tsl";
 import { pixelAt, type HeadlessFrame } from "@artex/render-core/testing/headless-gpu";
 import { probeHeadlessGpu } from "../testing/headlessGpuProbe";
-import { stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
+import { stubChannelInputs, stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
 import { fromDisplay } from "./displaySpace";
 import { applyInsideColor, applyInsideUv, applyPaintLocal } from "./evolutionEffects";
 
@@ -50,6 +50,7 @@ function setup(artwork: DataTexture, settings: Record<string, number>, time: num
     uniforms,
     image: stubImageInputs(SIZE, SIZE),
     face: stubFaceInputs(),
+    channels: stubChannelInputs(),
     ...stubLiveVectors(),
     liveUniform(name: string, initial = 0) {
       let node = uniforms.get(name);

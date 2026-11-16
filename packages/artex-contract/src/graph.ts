@@ -358,8 +358,11 @@ export type ArtexNotificationType =
   | "association_claim_declined"
   /** An org credited this account on one of its records; removable from the profile (#4780). */
   | "org_credit_added"
+  | "org_claim_unlinked"
   /** An org listed this account on its artist roster; the artist can ask to be removed (#5693). */
   | "org_roster_added"
+  /** An org on whose roster this artist is asked for their email; answered from the profile (#6542). */
+  | "org_contact_requested"
   // An imported work moving to the artist who claimed it, and an org taking one
   // back (docs/imported-work-transfer-on-claim.md).
   | "work_transfer_proposed"
@@ -480,6 +483,13 @@ export type ArtexNotificationType =
    * like the other platform-admin alerts; carries a url to /admin/signals.
    */
   | "signal_review_needed"
+  /**
+   * The daily reminder that signals still wait (#6745): proposed signals
+   * waiting more than 2 days (at most one per admin every 3 days), or a
+   * removal request open more than 20 hours (once per request). Uncatalogued
+   * like signal_review_needed; carries a url to /admin/signals.
+   */
+  | "signal_review_reminder"
   /**
    * Someone registered on ARTEX through an org's outreach link (COD-157).
    * Sent to that org's admins and managers under the program_artist_signup

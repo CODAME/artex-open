@@ -13,7 +13,7 @@
  * when it composites a stack over the artwork the way the WebGL backend
  * composites a user shader (mix, blend mode, mask, temporal smoothing).
  */
-import { Fn, clamp, uv, vec4 } from "three/tsl";
+import { Fn, clamp, sub, uv, vec2, vec4 } from "three/tsl";
 import type { Node } from "three/webgpu";
 import { ARTEX_BASE_TSL_SCRIPT_ID } from "@artex/contract";
 import type { TslGraphEntry, TslGraphFactory } from "@artex/contract/tsl";
@@ -51,7 +51,15 @@ const artexBaseFactory: TslGraphFactory = (inputs) => {
     // variable: inline, every stage would repeat the whole chain beneath it
     // at each use, and the shader grows multiplicatively (seconds to compile
     // and to draw a frame).
-    const flowed = held(applyFlow(inputs, uv()));
+    //
+    // In the WebGL base pass's uv space: there v grows UP the screen, on the
+    // WebGPU compositor it grows down (motionGrid.ts and touchGrid.ts measured
+    // it), and the artwork's texture keeps its top at v = 1 on both. Read in
+    // the compositor's own uv, the artwork came out upside down, and every
+    // effect's position (flow noise, paint, the face) mirrored.
+    const screen = uv();
+    const glUv = held(vec2(screen.x, sub(1, screen.y)));
+    const flowed = held(applyFlow(inputs, glUv));
     const sliced = held(applySliceDisplace(inputs, flowed));
     const deep = held(applyDepthParallax(inputs, sliced));
     const distorted = held(applyInsideUv(inputs, deep));

@@ -7,6 +7,12 @@ export type ArtexSignalType =
   | "pose"
   | "sound_level"
   | "sound_peak"
+  /** Loudness of the low band (about 20-250 Hz): kick, bass. 0..1. */
+  | "sound_bass"
+  /** Loudness of the middle band (about 250-2000 Hz): voice, most instruments. 0..1. */
+  | "sound_mid"
+  /** Loudness of the high band (about 2000-12000 Hz): cymbals, sibilance, air. 0..1. */
+  | "sound_high"
   | "time"
   | "idle_time"
   | "movement_energy"
@@ -153,6 +159,12 @@ export interface MidiLastNotePitchSignal extends BaseSignal {
   value: number; // Note number of most recent note-on / 127. Sticky.
 }
 
+/** One frequency band's loudness (docs/music-releases.md, "Living cover"). */
+export interface SoundBandSignal extends BaseSignal {
+  type: "sound_bass" | "sound_mid" | "sound_high";
+  value: number;
+}
+
 export type ArtexSignal =
   | PresenceSignal
   | ProximitySignal
@@ -160,6 +172,7 @@ export type ArtexSignal =
   | PoseSignal
   | SoundLevelSignal
   | SoundPeakSignal
+  | SoundBandSignal
   | TimeSignal
   | IdleTimeSignal
   | MovementEnergySignal

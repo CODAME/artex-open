@@ -8,7 +8,7 @@ import {
   FLOWER_SDF_TSL_SCRIPT_ID as SCRIPT_ID_FROM_LIGHT_MODULE,
   TSL_GRAPH_LIVE_UNIFORMS,
 } from "../scriptIds";
-import { stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
+import { stubChannelInputs, stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
 import { FLOWER_SDF_DEFAULT_PARAMS, FLOWER_SDF_TSL_GRAPH, FLOWER_SDF_TSL_SCRIPT_ID } from "./flowerSdf";
 
 function stubInputs(params: Record<string, number>): { inputs: TslPassInputs; declared: Set<string> } {
@@ -23,6 +23,7 @@ function stubInputs(params: Record<string, number>): { inputs: TslPassInputs; de
     uniforms,
     image: stubImageInputs(),
     face: stubFaceInputs(),
+    channels: stubChannelInputs(),
     ...stubLiveVectors(),
     liveUniform(name: string, initial = 0) {
       declared.add(name);

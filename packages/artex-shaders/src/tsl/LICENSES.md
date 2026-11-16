@@ -23,6 +23,9 @@ framing, per-pixel distance blur and haze, approach motion, camera labels).
 It was prompted by "touch[0]" by @sherrryism, scored to Ryoji Ikeda, seen only
 as an Instagram video; no footage, project file, or code from it was used.
 
+`graphs/identityEcho.ts` ports ARTEX's own `Identity Echo ARTEX.glsl` (from the
+Identity Echo lab, Milan, April 2026). No third-party code.
+
 The sample graphs (`graphs/*.ts`) are visually inspired by the open WebGPU/TSL
 demo space (e.g. `github.com/klevron/test-webgpu`) but share no source code with
 it. The klevron repository ships under no license; nothing here is derived from

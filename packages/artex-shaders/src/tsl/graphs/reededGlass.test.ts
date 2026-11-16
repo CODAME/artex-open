@@ -8,7 +8,7 @@ import {
   REEDED_GLASS_TSL_SCRIPT_ID as SCRIPT_ID_FROM_LIGHT_MODULE,
   TSL_GRAPH_LIVE_UNIFORMS,
 } from "../scriptIds";
-import { stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
+import { stubChannelInputs, stubFaceInputs, stubImageInputs, stubLiveVectors } from "../testing/stubImageInputs";
 import { REEDED_GLASS_TSL_GRAPH, REEDED_GLASS_TSL_SCRIPT_ID } from "./reededGlass";
 
 function stubInputs(): { inputs: TslPassInputs; declared: Set<string> } {
@@ -23,6 +23,7 @@ function stubInputs(): { inputs: TslPassInputs; declared: Set<string> } {
     uniforms,
     image: stubImageInputs(),
     face: stubFaceInputs(),
+    channels: stubChannelInputs(),
     ...stubLiveVectors(),
     liveUniform(name: string, initial = 0) {
       declared.add(name);

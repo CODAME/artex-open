@@ -6,7 +6,7 @@
  */
 import { texture, uniform } from "three/tsl";
 import { DataTexture, Vector2, Vector3, Vector4 } from "three/webgpu";
-import type { TslFaceInputs, TslImageInputs, TslPassInputs } from "@artex/contract/tsl";
+import type { TslChannelInputs, TslFaceInputs, TslImageInputs, TslPassInputs } from "@artex/contract/tsl";
 
 const blank = (): DataTexture => {
   const tex = new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
@@ -37,6 +37,19 @@ export function stubFaceInputs(): TslFaceInputs {
     leftEye: uniform(new Vector2(0.42, 0.56)),
     rightEye: uniform(new Vector2(0.58, 0.56)),
     present: uniform(0),
+  };
+}
+
+/** A `TslChannelInputs` with every slot empty, as the compositor starts. */
+export function stubChannelInputs(): TslChannelInputs {
+  return {
+    textures: [texture(blank()), texture(blank()), texture(blank()), texture(blank())],
+    resolutions: [
+      uniform(new Vector2(1, 1)),
+      uniform(new Vector2(1, 1)),
+      uniform(new Vector2(1, 1)),
+      uniform(new Vector2(1, 1)),
+    ],
   };
 }
 

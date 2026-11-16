@@ -14,13 +14,14 @@ describe("GLSL_TO_TSL_SCRIPT_ID", () => {
     expect(new Set(scriptIds).size).toBe(scriptIds.length);
   });
 
-  it("lists the five measured ports", () => {
+  it("lists the six measured ports", () => {
     expect(GLSL_TO_TSL_SCRIPT_ID).toEqual({
       "flower-sdf-artex": "flower-sdf-tsl",
       "reeded-glass-portrait-artex": "reeded-glass-tsl",
       "phone-chromatic-warp-artex": "phone-chromatic-warp-tsl",
       "phone-glitch-split-artex": "phone-glitch-split-tsl",
       "artex-living-field": "artex-living-field-tsl",
+      "identity-echo-artex": "identity-echo-tsl",
     });
   });
 });

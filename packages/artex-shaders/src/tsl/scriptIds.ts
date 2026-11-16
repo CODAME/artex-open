@@ -32,6 +32,16 @@ export const MOTION_GRID_TSL_SCRIPT_ID = "motion-grid-tsl";
 /** The Touch Grid graph's `scriptId`. Referenced by stored piece configs — never change it. */
 export const TOUCH_GRID_TSL_SCRIPT_ID = "touch-grid-tsl";
 
+/** The Identity Echo graph's `scriptId` (TSL port of `identity-echo-artex`). Never change it. */
+export const IDENTITY_ECHO_TSL_SCRIPT_ID = "identity-echo-tsl";
+
+/**
+ * The exact-name live uniforms the Identity Echo graph declares with
+ * `liveUniform`: the GLSL's three sliders. Data, for the same reason as the
+ * flower's list below.
+ */
+export const IDENTITY_ECHO_TSL_LIVE_UNIFORMS = ["uEffectParam1", "uEffectParam2", "uEffectParam3"] as const;
+
 /** The Procedural Flower graph's `scriptId` (TSL port of `flower-sdf-artex`). Never change it. */
 export const FLOWER_SDF_TSL_SCRIPT_ID = "flower-sdf-tsl";
 
@@ -166,6 +176,7 @@ export const TSL_GRAPH_LIVE_UNIFORMS: Readonly<Record<string, readonly string[]>
   [PHONE_CHROMATIC_WARP_TSL_SCRIPT_ID]: PHONE_CHROMATIC_WARP_TSL_LIVE_UNIFORMS,
   [PHONE_GLITCH_SPLIT_TSL_SCRIPT_ID]: PHONE_GLITCH_SPLIT_TSL_LIVE_UNIFORMS,
   [LIVING_FIELD_TSL_SCRIPT_ID]: LIVING_FIELD_TSL_LIVE_UNIFORMS,
+  [IDENTITY_ECHO_TSL_SCRIPT_ID]: IDENTITY_ECHO_TSL_LIVE_UNIFORMS,
 };
 
 /**
@@ -182,6 +193,7 @@ export const GLSL_TO_TSL_SCRIPT_ID: Readonly<Record<string, string>> = {
   "phone-chromatic-warp-artex": PHONE_CHROMATIC_WARP_TSL_SCRIPT_ID,
   "phone-glitch-split-artex": PHONE_GLITCH_SPLIT_TSL_SCRIPT_ID,
   "artex-living-field": LIVING_FIELD_TSL_SCRIPT_ID,
+  "identity-echo-artex": IDENTITY_ECHO_TSL_SCRIPT_ID,
 };
 
 /** The graph a builtin GLSL shader was ported to, or null when it has not been. */

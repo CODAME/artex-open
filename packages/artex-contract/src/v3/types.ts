@@ -41,6 +41,10 @@ export const RENDERER_SUBSYSTEMS = [
   "audio-reactive",
   "p5js",
   "webgpu-scene",
+  // A work's photos and videos played in order, as attached DOM media with
+  // native decode (the `media` block). Not a GPU renderer, so it needs no
+  // WebGPU and adds no second live renderer.
+  "media",
 ] as const;
 
 /** Individual subsystem that a piece may require. */
@@ -734,6 +738,58 @@ export interface FractureDispersalConfig {
   reassemble?: boolean;
 }
 
+/**
+ * Media block: a work's photos and videos, shown one at a time in their order
+ * (docs/runtime-player-contract.md, "The media block"; multi-media plan §3).
+ *
+ * It exists so a work with an ordered media list and no live piece (an
+ * imported BIAAF or CODAME archive work) plays through the contract like any
+ * other piece. A live piece never carries one: its media list is documentation
+ * beside the piece, and Display plays the piece only.
+ *
+ * The player draws attached `<img>` / `<video>` elements with native decode,
+ * letterboxed (`object-fit: contain`) on black. Nothing pans, zooms or crops.
+ *
+ * Items point at Display renditions only, never originals: the 1920w WebP of a
+ * still, the animated WebP of an animation, or a hosted video file. An embed
+ * (Vimeo, YouTube) never appears here: a cross-origin player cannot be timed
+ * and we do not hold the file. Only items the artist left `display !== false`
+ * are carried.
+ */
+export interface MediaBlockConfig {
+  /** In the artist's order. 1 to MEDIA_BLOCK_MAX_ITEMS items. */
+  items: MediaBlockItem[];
+}
+
+/** Same cap as a work's media list (WORK_MEDIA_MAX_ITEMS). */
+export const MEDIA_BLOCK_MAX_ITEMS = 24;
+
+export type MediaBlockItemKind = "image" | "video";
+
+export interface MediaBlockItem {
+  /** The work media item's id, stable across reorders. */
+  id: string;
+  kind: MediaBlockItemKind;
+  /**
+   * Package-relative path of the bytes, under `art/` (e.g.
+   * `art/media-<id>.webp`). Preferred: it is what an offline Display has.
+   * `readCodamePackageArchive()` extracts every path a media block names.
+   */
+  path?: string;
+  /**
+   * Hosted https URL. A video's only source (videos are not bundled); an
+   * image's fallback when the package does not carry its bytes.
+   */
+  url?: string;
+  /** An animated WebP. Still an image: it shows for its time, never holds the slot. */
+  animated?: boolean;
+  width?: number;
+  height?: number;
+  /** A video's length when known; the player reads the element's own duration first. */
+  durationSec?: number;
+  alt?: string;
+}
+
 // ---------------------------------------------------------------------------
 // 6. V3 Block discriminated union + Composition (C.3.1)
 // ---------------------------------------------------------------------------
@@ -749,7 +805,7 @@ export interface FractureDispersalConfig {
  * runtime is the same as the array index — earlier entries render
  * underneath later entries (DOM layer stack; see Phase C plan §Q7.b).
  */
-export type BlockKind = "shader-stack" | "scene" | "particle" | "sketch" | "html" | "plugin" | "fracture";
+export type BlockKind = "shader-stack" | "scene" | "particle" | "sketch" | "html" | "plugin" | "fracture" | "media";
 
 /** Every block has a stable id and a kind discriminator. */
 interface BlockBase {
@@ -803,6 +859,11 @@ export interface FractureBlock extends BlockBase {
   config: FractureBlockConfig;
 }
 
+export interface MediaBlock extends BlockBase {
+  kind: "media";
+  config: MediaBlockConfig;
+}
+
 /** Union of every supported V3 composition block. */
 export type Block =
   | ShaderStackBlock
@@ -811,7 +872,8 @@ export type Block =
   | SketchBlock
   | HtmlBlock
   | PluginBlock
-  | FractureBlock;
+  | FractureBlock
+  | MediaBlock;
 
 // ---------------------------------------------------------------------------
 // Unified V3 Piece Config
