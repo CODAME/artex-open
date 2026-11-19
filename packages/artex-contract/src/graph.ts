@@ -592,7 +592,13 @@ export type ArtexNotificationType =
    * have gone unanswered. Carries a url to the org's Members tab, where the
    * pending list with resend and revoke lives.
    */
-  | "org_invite_queue_stale";
+  | "org_invite_queue_stale"
+  /**
+   * Daily rollup to platform admins while any artist or org is owed money held
+   * for a payout account that is not ready, or ready and waiting for a retry.
+   * Carries a url to the Payouts page's Payout setup card.
+   */
+  | "platform_payout_holds";
 
 export interface ArtexNotification {
   id: string;
