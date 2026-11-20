@@ -461,6 +461,8 @@ export type ArtexNotificationType =
   // produces `undefined` in the UI rather than a build error.
   /** An org's activity digest is ready to read. Carries a url. */
   | "org_digest_ready"
+  /** An artist's own newsletter draft is ready to read (#6898). Carries a url. */
+  | "artist_digest_ready"
   /**
    * Keep importing new posts: the daily feed sync brought new posts in from
    * the org's saved feed as unpublished articles. Sent to the org's admins and
