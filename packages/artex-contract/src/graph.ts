@@ -381,11 +381,15 @@ export type ArtexNotificationType =
   | "program_application_rejected"
   /** A curator asked about a submission before deciding ("Ask the artist"). */
   | "program_application_question"
+  /** A curator moved the submission to one of the program's events. */
+  | "program_application_moved"
   // Call for Artists — curator-facing
   | "program_application_received"
   | "program_application_withdrawn"
   /** The artist answered a curator's question. */
   | "program_application_replied"
+  /** A program submission was moved to your event for you to review. */
+  | "program_application_moved_in"
   // A teammate @mentioned you in a submission's team notes.
   | "team_note_mention"
   /** The artist added the finished work to an accepted proposal. */
@@ -492,6 +496,13 @@ export type ArtexNotificationType =
    * like signal_review_needed; carries a url to /admin/signals.
    */
   | "signal_review_reminder"
+  /**
+   * An ARTEX article scheduled to publish with its newsletter did not all go
+   * out at its time: refused (nothing published, nothing sent), or published
+   * with the send failing. Sent to the platform admin who scheduled it;
+   * uncatalogued like signal_review_needed; carries a url to the article's editor.
+   */
+  | "scheduled_publish_failed"
   /**
    * Someone registered on ARTEX through an org's outreach link (COD-157).
    * Sent to that org's admins and managers under the program_artist_signup
