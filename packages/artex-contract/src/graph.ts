@@ -264,6 +264,28 @@ export interface PublicArtistCollection {
   workSlugs: string[];
 }
 
+/**
+ * One org collection holding an artist's work, as the Collections section of
+ * the artist's profile lists it (`GET /public/org-collections?workId=`). An org
+ * collection is a published, public permanent gallery of a public org. Counts
+ * and covers come from its public works only. Unlike `PublicArtistCollection`
+ * it carries no member slugs: an org collection never hides a work from the
+ * artist's own Works grid.
+ */
+export interface PublicOrgCollectionCard {
+  slug: string;
+  orgSlug: string;
+  orgName: string;
+  title: string;
+  description: string | null;
+  /** The collection's cover, else its first public work's; null when neither exists. */
+  coverImageUrl: string | null;
+  /** Public works in the collection, by anyone. */
+  workCount: number;
+  /** The collection's public page: `/orgs/<orgSlug>/<slug>`. */
+  path: string;
+}
+
 // ── Phase 3C — Series (org-level) ────────────────────────────────────────
 
 export interface OrgSeriesEntry {
