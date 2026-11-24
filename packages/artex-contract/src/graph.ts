@@ -201,6 +201,11 @@ export interface PublicWorkCollectionEntry {
   coverImageUrl: string | null;
   /** Who the work is credited to, placeholder credits removed; [] when none. Absent from an older API. */
   artistNames?: string[];
+  /**
+   * The kind of work ("music", "video", ...), so the page can play the
+   * collection's music as one queue; null when unknown. Absent from an older API.
+   */
+  contentType?: string | null;
 }
 
 /**
