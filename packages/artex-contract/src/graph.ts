@@ -397,6 +397,8 @@ export type ArtexNotificationType =
   | "org_roster_added"
   /** An org on whose roster this artist is asked for their email; answered from the profile (#6542). */
   | "org_contact_requested"
+  /** An org asked this artist for an interview, for a program or the org itself (#7183); answered from the profile. */
+  | "org_interview_requested"
   // An imported work moving to the artist who claimed it, and an org taking one
   // back (docs/imported-work-transfer-on-claim.md).
   | "work_transfer_proposed"
