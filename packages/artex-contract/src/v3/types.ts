@@ -777,10 +777,21 @@ export interface MediaBlockItem {
    */
   path?: string;
   /**
-   * Hosted https URL. A video's only source (videos are not bundled); an
-   * image's fallback when the package does not carry its bytes.
+   * Hosted https URL: an image's fallback when the package does not carry its
+   * bytes, and a video's hosted file (its 1080p rendition once one exists,
+   * else the uploaded file). A video may also be bundled under `path` (its
+   * 1080p rendition, when it fits the package), which plays first.
    */
   url?: string;
+  /**
+   * A video's 2160p rendition, hosted. Written only for a source at least that
+   * large; a player picks it on a screen that can show it, else `url`.
+   */
+  uhdUrl?: string;
+  /** A video's poster still, bundled under `art/`: shown until the video plays. */
+  posterPath?: string;
+  /** A video's poster still, hosted: the fallback for `posterPath`. */
+  posterUrl?: string;
   /** An animated WebP. Still an image: it shows for its time, never holds the slot. */
   animated?: boolean;
   width?: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WORK_MEDIA_MAX_ITEMS, readWorkMediaFocus, readWorkMediaItem, readWorkMediaList } from "./workMedia";
+import { WORK_MEDIA_MAX_ITEMS, readWorkMediaFocus, readWorkMediaItem, readWorkMediaList, workMediaOrientation } from "./workMedia";
 
 const image = (id: string, extra: Record<string, unknown> = {}) => ({
   id,
@@ -22,6 +22,7 @@ describe("readWorkMediaItem", () => {
       url: "https://storage.googleapis.com/b/archive-mirrors/work-media/a.jpg",
       width: 1200,
       height: 800,
+      orientation: "landscape",
       sourceUrl: "https://codame.dreamhosters.com/uploaded_images/Shybot-1.jpg",
       role: "work",
       display: true,
@@ -128,5 +129,47 @@ describe("an item's focal point", () => {
     }
     const embed = readWorkMediaItem({ id: "v", kind: "embed", provider: "vimeo", url: "https://vimeo.com/851899423", focus: { x: 0.2, y: 0.2 } });
     expect(embed?.focus).toBeUndefined();
+  });
+});
+
+describe("an item's orientation", () => {
+  it.each([
+    [1920, 1080, "landscape"],
+    [1080, 1920, "portrait"],
+    [1080, 1080, "square"],
+    [1080, 1100, "square"],
+    [1000, 1100, "portrait"],
+  ] as const)("reads %i x %i as %s", (width, height, expected) => {
+    expect(workMediaOrientation(width, height)).toBe(expected);
+  });
+
+  it("is unknown without both sides", () => {
+    expect(workMediaOrientation(undefined, 1080)).toBeUndefined();
+    expect(workMediaOrientation(0, 1080)).toBeUndefined();
+    expect(workMediaOrientation(Number.NaN, 1080)).toBeUndefined();
+  });
+
+  it("is derived from the upright size on read, never trusted from the row", () => {
+    const item = readWorkMediaItem({
+      id: "v",
+      kind: "video",
+      url: "https://storage.googleapis.com/b/v.mp4",
+      width: 1080,
+      height: 1920,
+      orientation: "landscape",
+    });
+    expect(item?.orientation).toBe("portrait");
+    expect(readWorkMediaItem({ id: "w", kind: "video", url: "https://storage.googleapis.com/b/w.mp4", orientation: "landscape" })?.orientation).toBeUndefined();
+  });
+
+  it("keeps a video's screen renditions", () => {
+    const item = readWorkMediaItem({
+      id: "v",
+      kind: "video",
+      url: "https://storage.googleapis.com/b/v.mp4",
+      renditions: { v: 1, source: "x", video1080: "https://storage.googleapis.com/b/v-1080.mp4", video2160: "https://storage.googleapis.com/b/v-2160.mp4", poster: "https://storage.googleapis.com/b/v.webp" },
+    });
+    expect(item?.renditions?.video1080).toBe("https://storage.googleapis.com/b/v-1080.mp4");
+    expect(item?.renditions?.video2160).toBe("https://storage.googleapis.com/b/v-2160.mp4");
   });
 });

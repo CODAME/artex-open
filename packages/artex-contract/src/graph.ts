@@ -437,6 +437,8 @@ export type ArtexNotificationType =
   | "print_club_edition_won"
   /** An edition is ready to post and this recipient has no delivery address (#4799). */
   | "print_club_address_needed"
+  /** A published release the public cannot play: to its owner, once, and one reminder a week on (musicPlayNotice.mjs). */
+  | "music_release_not_playable"
   /** An org manager asked ARTEX to refund a subscription payment (to platform admins, #4805). */
   | "subscription_refund_requested"
   /** ARTEX approved and issued a requested refund (to the manager who asked). */

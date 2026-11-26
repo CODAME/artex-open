@@ -29,13 +29,26 @@ export const MEDIA_WORK_BLOCK_ID = "work-media";
 export interface MediaWorkPackageFile {
   path: string;
   sourceUrl: string;
+  /** What the bytes are: a still or animated image, a video's poster, or a video rendition. */
+  role: "image" | "poster" | "video";
 }
 
 export interface MediaWorkPackagePlan {
   /** The piece the package's config.json carries as `pieceConfigV3`. */
   pieceConfig: PieceConfig;
-  /** Image bytes to bundle, in item order. The first is the package's base artwork. */
+  /**
+   * Bytes to bundle: every image rendition in item order, then every video's
+   * poster, then every video rendition, so stills come first when the package
+   * runs out of room.
+   */
   files: MediaWorkPackageFile[];
+  /**
+   * The package's base artwork (`assets.baseImage`), the package contract's
+   * one hard requirement. The first image; else, in a list of videos only,
+   * the first poster; else the placeholder (`MEDIA_WORK_PLACEHOLDER_PATH`),
+   * which nothing draws: the media block is the whole piece.
+   */
+  basePath: string;
   /**
    * Changes whenever what Display would play changes (an item added, removed,
    * reordered, hidden, or re-rendered). A stored package whose fingerprint no
@@ -93,9 +106,43 @@ export const isArtexHostedMediaUrl = (value: string): boolean => {
   }
 };
 
+const safeItemId = (itemId: string): string => itemId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 80);
+
 /** A package path for an item: safe characters only, always directly under art/. */
-export const mediaWorkItemPath = (itemId: string): string =>
-  `art/media-${itemId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 80)}.webp`;
+export const mediaWorkItemPath = (itemId: string): string => `art/media-${safeItemId(itemId)}.webp`;
+
+/** Where a video's 1080p rendition is bundled. */
+export const mediaWorkVideoPath = (itemId: string): string => `art/media-${safeItemId(itemId)}.mp4`;
+
+/** Where a video's poster still is bundled. */
+export const mediaWorkPosterPath = (itemId: string): string => `art/media-${safeItemId(itemId)}-poster.webp`;
+
+/**
+ * The base artwork of a package whose list is videos with no poster yet: a
+ * 16 x 9 black lossless WebP. The package contract needs a base image, and a
+ * video uploaded a minute ago has no still until the video rendition job
+ * writes its poster. Nothing draws it: the media block is the whole piece.
+ */
+export const MEDIA_WORK_PLACEHOLDER_PATH = "art/media-base.webp";
+export const MEDIA_WORK_PLACEHOLDER_WEBP_BASE64 = "UklGRhoAAABXRUJQVlA4TA4AAAAvDwACAAcQEf0PRET/Aw==";
+
+/** A hosted file in one of ARTEX's own buckets, else null. */
+const ownHostedOrNull = (value: unknown): string | null => {
+  const url = httpsOrNull(value);
+  return url && !EMBED_HOST.test(url) && isArtexHostedMediaUrl(url) ? url : null;
+};
+
+/**
+ * A video's renditions, when they were derived from the file it holds now. A
+ * replaced file keeps its old set only until the save drops it; never play a
+ * rendition of a video the artist took out.
+ */
+const currentVideoRenditions = (item: WorkMediaItem): WorkMediaItem["renditions"] | null => {
+  const renditions = item.renditions;
+  if (!renditions) return null;
+  const source = item.path ?? item.url ?? null;
+  return renditions.source && renditions.source !== source ? null : renditions;
+};
 
 /**
  * Whether an item's rendition set is an animation. The rendition writer gives
@@ -110,7 +157,10 @@ const isAnimatedRenditionSet = (item: WorkMediaItem): boolean =>
  * - images with a 1920w rendition (a still WebP or an animated WebP). An image
  *   with no rendition yet is left out: originals are never served to Display;
  * - videos with a hosted https file in ARTEX's own storage, never a Vimeo or
- *   YouTube page and never another origin (`isArtexHostedMediaUrl`);
+ *   YouTube page and never another origin (`isArtexHostedMediaUrl`): the
+ *   1080p rendition once the video rendition job has written it (bundled
+ *   under `path`, the 2160p as `uhdUrl`, the poster as `posterPath`/
+ *   `posterUrl`), else the file as uploaded;
  * - never an embed, and never an item the artist set `display: false`.
  */
 export const displayMediaBlockItems = (media: readonly WorkMediaItem[] | null | undefined): MediaBlockItem[] => {
@@ -132,10 +182,22 @@ export const displayMediaBlockItems = (media: readonly WorkMediaItem[] | null | 
       items.push(block);
       seen.add(item.id);
     } else {
-      // A video: hosted files only, never a third-party page.
-      const url = httpsOrNull(item.url);
-      if (!url || EMBED_HOST.test(url) || !isArtexHostedMediaUrl(url)) continue;
+      // A video: hosted files only, never a third-party page. Its 1080p
+      // rendition plays when it exists (and is bundled when it fits), else the
+      // file as uploaded.
+      const renditions = currentVideoRenditions(item);
+      const rendition = ownHostedOrNull(renditions?.video1080);
+      const url = rendition ?? ownHostedOrNull(item.url);
+      if (!url) continue;
       const block: MediaBlockItem = { id: item.id, kind: "video", url };
+      if (rendition) block.path = mediaWorkVideoPath(item.id);
+      const uhd = rendition ? ownHostedOrNull(renditions?.video2160) : null;
+      if (uhd) block.uhdUrl = uhd;
+      const poster = ownHostedOrNull(renditions?.poster);
+      if (poster) {
+        block.posterPath = mediaWorkPosterPath(item.id);
+        block.posterUrl = poster;
+      }
       if (typeof item.durationSec === "number" && item.durationSec > 0) block.durationSec = item.durationSec;
       if (item.width && item.height) {
         block.width = item.width;
@@ -159,13 +221,23 @@ const fnv1a = (text: string): string => {
   return hash.toString(16).padStart(8, "0");
 };
 
+/**
+ * A video's 2160p rendition and poster are appended only when it has either,
+ * so every package built before videos had renditions keeps its fingerprint
+ * and stays on Display without a rebuild.
+ */
+const fingerprintRow = (item: MediaBlockItem): unknown[] => {
+  const row: unknown[] = [item.id, item.kind, item.url ?? null, item.path ?? null, item.animated === true];
+  return item.uhdUrl || item.posterUrl ? [...row, item.uhdUrl ?? null, item.posterUrl ?? null] : row;
+};
+
 export const mediaWorkPackageFingerprint = (items: readonly MediaBlockItem[]): string =>
-  `v${MEDIA_WORK_PACKAGE_VERSION}-${fnv1a(JSON.stringify(items.map((item) => [item.id, item.kind, item.url ?? null, item.path ?? null, item.animated === true])))}`;
+  `v${MEDIA_WORK_PACKAGE_VERSION}-${fnv1a(JSON.stringify(items.map(fingerprintRow)))}`;
 
 /**
  * The package a media-only work plays from, or null when it has nothing
- * Display can play, or when no item is an image (the package needs one as its
- * base artwork, `readCodamePackageArchive()`'s one hard requirement).
+ * Display can play. A list of videos alone gets one too: a poster, or the
+ * placeholder, stands in for the base artwork the package contract requires.
  */
 export const planMediaWorkPackage = (work: {
   id: string;
@@ -173,10 +245,18 @@ export const planMediaWorkPackage = (work: {
   media?: readonly WorkMediaItem[] | null;
 }): MediaWorkPackagePlan | null => {
   const items = displayMediaBlockItems(work.media);
-  const files = items
+  if (items.length === 0) return null;
+  const images = items
     .filter((item) => item.kind === "image" && item.path && item.url)
-    .map((item) => ({ path: item.path as string, sourceUrl: item.url as string }));
-  if (files.length === 0) return null;
+    .map((item): MediaWorkPackageFile => ({ path: item.path as string, sourceUrl: item.url as string, role: "image" }));
+  const posters = items
+    .filter((item) => item.kind === "video" && item.posterPath && item.posterUrl)
+    .map((item): MediaWorkPackageFile => ({ path: item.posterPath as string, sourceUrl: item.posterUrl as string, role: "poster" }));
+  const videos = items
+    .filter((item) => item.kind === "video" && item.path && item.url)
+    .map((item): MediaWorkPackageFile => ({ path: item.path as string, sourceUrl: item.url as string, role: "video" }));
+  const files = [...images, ...posters, ...videos];
+  const basePath = images.length > 0 ? images[0].path : posters.length > 0 ? posters[0].path : MEDIA_WORK_PLACEHOLDER_PATH;
   const title = typeof work.title === "string" && work.title.trim() ? work.title.trim() : "Untitled";
   const pieceConfig: PieceConfig = {
     version: 3,
@@ -185,15 +265,18 @@ export const planMediaWorkPackage = (work: {
     renderer: { primary: "media" },
     composition: [{ kind: "media", id: MEDIA_WORK_BLOCK_ID, config: { items } }],
   };
-  return { pieceConfig, files, fingerprint: mediaWorkPackageFingerprint(items) };
+  return { pieceConfig, files, basePath, fingerprint: mediaWorkPackageFingerprint(items) };
 };
 
 /**
  * The package's config.json: the minimum the package contract requires
- * (`validateConfigJson`), the first image as its base artwork, and the piece.
+ * (`validateConfigJson`), its base artwork (`basePath`), and the piece.
  * Nothing in it animates the base: the media block is the whole piece.
  */
-export const mediaWorkConfigJson = (work: { id: string; title?: string | null }, plan: MediaWorkPackagePlan): Record<string, unknown> => ({
+export const mediaWorkConfigJson = (
+  work: { id: string; title?: string | null },
+  plan: Pick<MediaWorkPackagePlan, "pieceConfig" | "basePath">,
+): Record<string, unknown> => ({
   version: 1,
   artworkId: work.id,
   title: plan.pieceConfig.title,
@@ -203,6 +286,6 @@ export const mediaWorkConfigJson = (work: { id: string; title?: string | null },
   evolution: { mode: "timeBased", durationDays: 1, phases: [{ startDay: 0, label: "still", colorTemperatureShift: 0, noiseIntensity: 0, brightnessShift: 0 }] },
   interaction: { supportsProximity: false, supportsAmbientLight: false, events: [] },
   constraints: { protectedRegions: [] },
-  assets: { baseImage: plan.files[0].path },
+  assets: { baseImage: plan.basePath },
   pieceConfigV3: plan.pieceConfig,
 });

@@ -1,6 +1,8 @@
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import {
+  MEDIA_WORK_PLACEHOLDER_PATH,
+  MEDIA_WORK_PLACEHOLDER_WEBP_BASE64,
   displayMediaBlockItems,
   isArtexHostedMediaUrl,
   mediaWorkConfigJson,
@@ -20,6 +22,28 @@ function must<T>(value: T | null | undefined): T {
 }
 
 const FILM = "https://storage.googleapis.com/artex-490510.firebasestorage.app/work-media/film.mp4";
+
+const OWN = "https://storage.googleapis.com/artex-490510.firebasestorage.app/work-media-renditions";
+
+const film = (id: string, extra: Partial<WorkMediaItem> = {}): WorkMediaItem => ({
+  id,
+  kind: "video",
+  path: `projects/u/p/media/${id}.mov`,
+  url: `https://storage.googleapis.com/artex-490510.firebasestorage.app/projects/u/p/media/${id}.mov`,
+  ...extra,
+});
+
+const transcoded = (id: string): WorkMediaItem => film(id, {
+  width: 1080,
+  height: 1080,
+  durationSec: 4,
+  renditions: {
+    v: 1,
+    source: `projects/u/p/media/${id}.mov`,
+    video1080: `${OWN}/${id}-1080.mp4`,
+    poster: `${OWN}/${id}-poster.webp`,
+  },
+});
 
 const still = (id: string, extra: Partial<WorkMediaItem> = {}): WorkMediaItem => ({
   id,
@@ -108,10 +132,37 @@ describe("planMediaWorkPackage", () => {
     expect(plan.files.map((file) => file.path)).toEqual(["art/media-gif.webp", "art/media-a.webp"]);
   });
 
-  it("is null when nothing can play, or when there is no image to be the base artwork", () => {
+  it("is null when nothing can play", () => {
     expect(planMediaWorkPackage({ id: "w", media: [] })).toBeNull();
     expect(planMediaWorkPackage({ id: "w", media: [{ id: "e", kind: "embed", provider: "youtube", url: "https://youtu.be/x" }] })).toBeNull();
     expect(planMediaWorkPackage({ id: "w", media: [{ id: "v", kind: "video", url: "https://cdn.example/v.mp4" }] })).toBeNull();
+  });
+
+  it("plays a list of videos alone: the poster, else the placeholder, is the base artwork", () => {
+    const raw = must(planMediaWorkPackage({ id: "w", media: [film("raw")] }));
+    expect(raw.basePath).toBe(MEDIA_WORK_PLACEHOLDER_PATH);
+    expect(raw.files).toEqual([]);
+    expect(() => { validatePieceConfig(raw.pieceConfig); }).not.toThrow();
+
+    const ready = must(planMediaWorkPackage({ id: "w", media: [film("raw"), transcoded("loop")] }));
+    expect(ready.basePath).toBe("art/media-loop-poster.webp");
+    expect(ready.files.map((file) => [file.role, file.path])).toEqual([
+      ["poster", "art/media-loop-poster.webp"],
+      ["video", "art/media-loop.mp4"],
+    ]);
+    expect(() => { validatePieceConfig(ready.pieceConfig); }).not.toThrow();
+  });
+
+  it("keeps an image as the base and bundles stills before any video", () => {
+    const plan = must(planMediaWorkPackage({ id: "w", media: [transcoded("loop"), still("a")] }));
+    expect(plan.basePath).toBe("art/media-a.webp");
+    expect(plan.files.map((file) => file.role)).toEqual(["image", "poster", "video"]);
+  });
+
+  it("changes its fingerprint when a video gains its rendition", () => {
+    const before = must(planMediaWorkPackage({ id: "w", media: [film("loop")] }));
+    const after = must(planMediaWorkPackage({ id: "w", media: [transcoded("loop")] }));
+    expect(after.fingerprint).not.toBe(before.fingerprint);
   });
 
   it("changes its fingerprint when what plays changes, and only then", () => {
@@ -144,8 +195,26 @@ describe("validateMediaBlock", () => {
     ])); })).toBeNull();
   });
 
+  it("accepts a video's rendition fields", () => {
+    expect(code(() => { validateMediaBlock(block([
+      {
+        id: "v",
+        kind: "video",
+        url: "https://cdn.example/v-1080.mp4",
+        path: "art/media-v.mp4",
+        uhdUrl: "https://cdn.example/v-2160.mp4",
+        posterPath: "art/media-v-poster.webp",
+        posterUrl: "https://cdn.example/v-poster.webp",
+      },
+    ])); })).toBeNull();
+  });
+
   it.each([
     ["no items", []],
+    ["a poster on an image", [{ id: "i", kind: "image", path: "art/i.webp", posterUrl: "https://cdn.example/p.webp" }]],
+    ["a poster outside art/", [{ id: "v", kind: "video", url: "https://cdn.example/v.mp4", posterPath: "states/p.webp" }]],
+    ["a 2160p rendition on http", [{ id: "v", kind: "video", url: "https://cdn.example/v.mp4", uhdUrl: "http://cdn.example/v.mp4" }]],
+    ["a 2160p rendition on YouTube", [{ id: "v", kind: "video", url: "https://cdn.example/v.mp4", uhdUrl: "https://youtu.be/x" }]],
     ["an embed kind", [{ id: "e", kind: "embed", url: "https://vimeo.com/1" }]],
     ["a Vimeo page as a video", [{ id: "v", kind: "video", url: "https://player.vimeo.com/video/1" }]],
     ["a YouTube page as an image", [{ id: "y", kind: "image", url: "https://youtu.be/x" }]],
@@ -191,6 +260,31 @@ describe("a synthesized media package round-trips through readCodamePackageArchi
     expect(() => { validatePieceConfig(piece); }).not.toThrow();
     const media = getRenderableComposition(piece)[0] as MediaBlock;
     expect(media.config.items.map((item) => item.id)).toEqual(["a", "gif", "film"]);
+  });
+
+  it("loads a list of videos alone, with its poster and its bundled rendition", async () => {
+    const work = { id: "w1", media: [transcoded("loop")] };
+    const plan = must(planMediaWorkPackage(work));
+    const zip = new JSZip();
+    zip.file("config.json", JSON.stringify(mediaWorkConfigJson(work, plan)));
+    for (const file of plan.files) zip.file(file.path, new Uint8Array([82, 73, 70, 70]));
+    const loaded = await readCodamePackageArchive(await zip.generateAsync({ type: "uint8array" }));
+    expect(loaded.assets.baseImagePath).toBe("art/media-loop-poster.webp");
+    expect([...loaded.files.keys()].sort()).toEqual(["art/media-loop-poster.webp", "art/media-loop.mp4"]);
+    expect(loaded.warnings).toEqual([]);
+  });
+
+  it("loads a list of videos with no poster yet, on the placeholder", async () => {
+    const work = { id: "w1", media: [film("raw")] };
+    const plan = must(planMediaWorkPackage(work));
+    const zip = new JSZip();
+    zip.file("config.json", JSON.stringify(mediaWorkConfigJson(work, plan)));
+    zip.file(MEDIA_WORK_PLACEHOLDER_PATH, Uint8Array.from(atob(MEDIA_WORK_PLACEHOLDER_WEBP_BASE64), (c) => c.charCodeAt(0)));
+    const loaded = await readCodamePackageArchive(await zip.generateAsync({ type: "uint8array" }));
+    expect(loaded.assets.baseImagePath).toBe(MEDIA_WORK_PLACEHOLDER_PATH);
+    expect(loaded.warnings).toEqual([]);
+    const media = getRenderableComposition(must(loaded.config.pieceConfigV3))[0] as MediaBlock;
+    expect(media.config.items[0].url).toContain("raw.mov");
   });
 
   it("warns, never fails, when a bundled item is missing", async () => {

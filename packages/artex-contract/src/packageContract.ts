@@ -226,8 +226,10 @@ export const mediaBlockPackagePaths = (config: ConfigJson): string[] => {
   const paths: string[] = [];
   for (const block of composition as Array<{ kind?: unknown; config?: { items?: unknown } } | null>) {
     if (!block || block.kind !== "media" || !Array.isArray(block.config?.items)) continue;
-    for (const item of block.config.items as Array<{ path?: unknown } | null>) {
-      if (typeof item?.path === "string" && /^art\/[^/]+$/.test(item.path)) paths.push(item.path);
+    for (const item of block.config.items as Array<{ path?: unknown; posterPath?: unknown } | null>) {
+      for (const candidate of [item?.path, item?.posterPath]) {
+        if (typeof candidate === "string" && /^art\/[^/]+$/.test(candidate)) paths.push(candidate);
+      }
     }
   }
   return paths;

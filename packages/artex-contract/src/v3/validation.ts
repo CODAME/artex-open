@@ -627,6 +627,32 @@ export function validateMediaBlock(config: MediaBlockConfig): void {
         throw new PieceConfigError("invalid_media_block", `Media block item "${id}" is an embed; embeds never play in a media block.`);
       }
     }
+    for (const key of ["uhdUrl", "posterUrl"] as const) {
+      const value = raw[key];
+      const extra = typeof value === "string" ? value.trim() : "";
+      if (value === undefined) continue;
+      if (raw.kind !== "video") {
+        throw new PieceConfigError("invalid_media_block", `Media block item "${id}" has \`${key}\` but is not a video.`);
+      }
+      let parsed: URL | null;
+      try {
+        parsed = new URL(extra);
+      } catch {
+        parsed = null;
+      }
+      if (!parsed || parsed.protocol !== "https:" || EMBED_HOST_PATTERN.test(parsed.hostname)) {
+        throw new PieceConfigError("invalid_media_block", `Media block item "${id}" \`${key}\` must be a hosted https file.`);
+      }
+    }
+    if (raw.posterPath !== undefined) {
+      const posterPath = typeof raw.posterPath === "string" ? raw.posterPath.trim() : "";
+      if (raw.kind !== "video") {
+        throw new PieceConfigError("invalid_media_block", `Media block item "${id}" has \`posterPath\` but is not a video.`);
+      }
+      if (!isPackageArtPath(posterPath)) {
+        throw new PieceConfigError("invalid_media_block", `Media block item "${id}" posterPath must be a file directly under art/.`);
+      }
+    }
     if (raw.kind === "video" && !url) {
       throw new PieceConfigError("invalid_media_block", `Media block video "${id}" must have a hosted https url.`);
     }

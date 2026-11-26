@@ -56,9 +56,37 @@ export interface WorkMediaRenditions {
   source?: string;
   frames?: number;
   pixels?: number;
+  /**
+   * A video's screen renditions (docs/display-playback-modes.md, "Video
+   * renditions"): H.264 MP4 whose short side is at most 1080 px, and at most
+   * 2160 px when the source is at least that large. Written by the video
+   * rendition job (scripts/backfill_work_video_renditions.mjs); a video's
+   * `poster` is a still WebP of one of its frames. The original is kept.
+   */
+  video1080?: string;
+  video2160?: string;
 }
 
-const RENDITION_URL_KEYS = ["w480", "w960", "w1920", "avif480", "avif960", "avif1920", "poster"] as const;
+const RENDITION_URL_KEYS = ["w480", "w960", "w1920", "avif480", "avif960", "avif1920", "poster", "video1080", "video2160"] as const;
+
+export const WORK_MEDIA_ORIENTATIONS = ["portrait", "landscape", "square"] as const;
+export type WorkMediaOrientation = (typeof WORK_MEDIA_ORIENTATIONS)[number];
+
+/** Within this fraction of 1:1 an item reads as square (a 1080 x 1100 frame is square). */
+export const WORK_MEDIA_SQUARE_TOLERANCE = 0.05;
+
+/**
+ * An item's orientation from its upright width and height (after any
+ * rotation the file declares), or undefined when either is unknown. Lets a
+ * playlist match a screen's orientation without decoding the file.
+ */
+export const workMediaOrientation = (width: unknown, height: unknown): WorkMediaOrientation | undefined => {
+  if (typeof width !== "number" || typeof height !== "number") return undefined;
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return undefined;
+  const ratio = width / height;
+  if (Math.abs(ratio - 1) <= WORK_MEDIA_SQUARE_TOLERANCE) return "square";
+  return ratio > 1 ? "landscape" : "portrait";
+};
 
 export interface WorkMediaItem {
   /** Stable across reorders. */
@@ -70,8 +98,14 @@ export interface WorkMediaItem {
   url?: string | null;
   /** Embeds only. */
   provider?: WorkMediaEmbedProvider;
+  /** Upright size, after any rotation the file declares. */
   width?: number;
   height?: number;
+  /**
+   * Derived from `width` and `height` (`workMediaOrientation`), never set on
+   * its own: the reader recomputes it, so it can never disagree with them.
+   */
+  orientation?: WorkMediaOrientation;
   durationSec?: number | null;
   renditions?: WorkMediaRenditions;
   alt?: string | null;
@@ -168,6 +202,8 @@ export const readWorkMediaItem = (value: unknown): WorkMediaItem | null => {
   if (width && height) {
     item.width = width;
     item.height = height;
+    const orientation = kind === "embed" ? undefined : workMediaOrientation(width, height);
+    if (orientation) item.orientation = orientation;
   }
   if (typeof value.durationSec === "number" && Number.isFinite(value.durationSec) && value.durationSec > 0) {
     item.durationSec = value.durationSec;
