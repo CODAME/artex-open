@@ -8,6 +8,7 @@ export * from "./ai/suggestionLifecycle";
 export * from "./ai/suggestionAttribution";
 export * from "./tiers";
 export * from "./broadcastBands";
+export * from "./matchboxAsks";
 export * from "./screenQuestionBands";
 export * from "./feeSchedule";
 export * from "./creditLedger";

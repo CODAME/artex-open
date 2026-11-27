@@ -48,6 +48,11 @@ export interface WorkRelation {
   targetWorkSlug: string | null;
   ownerUserId: string;
   createdAt: string;
+  /**
+   * Set by the artist whose work another artist's link names (#7010): the link
+   * stays in both Studios but is kept off the public page. Absent means shown.
+   */
+  hidden?: boolean;
 }
 
 export interface WorkGraphSummary {
@@ -511,6 +516,12 @@ export type ArtexNotificationType =
    * managers; carries a url to the org's Articles tab.
    */
   | "org_articles_imported"
+  /**
+   * A message in a Conversation: someone the reader matched with on Matchbox
+   * wrote to them. One row per conversation, rewritten by each new message.
+   * Carries a url to the thread.
+   */
+  | "conversation_message"
   /**
    * A platform announcement. Deliberately carries no url: the body is the whole
    * update, and no client surface reads the type.
